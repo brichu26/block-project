@@ -22,10 +22,10 @@ from gwt_agent import GWTAutogenAgent
 from baseline_agent import BaselineAutogenAgent
 from autogen import ConversableAgent, register_function, GroupChat, GroupChatManager
 
-global_num_games_to_evaluate = 20
-global_max_actions_per_game = 65
+global_num_games_to_evaluate = 139
+global_max_actions_per_game = 60
 global_max_chat_rounds_per_game = 500
-global_split_rounds_per_game = 1
+global_split_rounds_per_game = 2
 base_path = os.path.join("runs", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 os.makedirs(base_path, exist_ok=True)
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
                             "from": matches[idx],
                             "to": matches[idx + 1],
                             "step": idx
-                        })
+                    })
 
                     # Save transitions to file
                     transition_path = os.path.join(os.path.dirname(log_paths['chat_history_path']),
@@ -213,12 +213,14 @@ if __name__ == "__main__":
 
                     belief_state_pattern = r"Belief State: (.*)"
                     matches = re.findall(belief_state_pattern, chat_text, re.IGNORECASE)
-                    agent.prev_episodic_memories.append({"episode": num_games_evaluated, "memory": matches})
+                    if matches:
+                        agent.prev_episodic_memories.append({"episode": num_games_evaluated, "task_outcome": agent.task_status , "memory": matches})
+                    else:
+                        agent.prev_episodic_memories.append({"episode": num_games_evaluated, "task_outcome": agent.task_status , "memory": agent.curr_episodic_memory})
 
                     # Evaluate and log success
                     elapsed_minutes = (end_time - start_time) / 60
                     cumulative_runtime += elapsed_minutes
-                    num_games_no_error = num_games_evaluated - len(error_list)
 
                     success = agent.success
                     if success:
@@ -242,6 +244,10 @@ if __name__ == "__main__":
 
                     success_rate = num_successes / num_games_evaluated
 
+                    num_games_no_error = num_games_evaluated - len(
+                        [game for game in error_list if game not in success_list])
+                    error_adjusted_success_rate = num_successes / num_games_no_error
+
                     wandb.log({
                         "game_no": i,
                         "success": int(success),
@@ -252,7 +258,8 @@ if __name__ == "__main__":
                         "avg_runtime_per_successful_game": avg_runtime_per_successful_game,
                         "runtime": elapsed_minutes,
                         "cumulative_runtime": cumulative_runtime,
-                        "chat_rounds": chat_round_list[-1]
+                        "chat_rounds": chat_round_list[-1],
+                        "error_adjusted_success_rate": error_adjusted_success_rate
                     }, step=num_games_evaluated)
 
                     print(f"[Ran Game #{i}]")
@@ -272,7 +279,7 @@ if __name__ == "__main__":
                     print(f"Successes: {success_list}")
                     print(f"Failures: {failure_list}")
                     print(f"Errors: {error_list}")
-                    print(f"Error-Adjusted Success Rate: {num_successes}/{num_games_no_error} = {100 * num_successes / num_games_no_error if num_games_no_error > 0 else 0:.2f}%")
+                    print(f"Error-Adjusted Success Rate: {num_successes}/{num_games_no_error} = {100 * error_adjusted_success_rate if num_games_no_error > 0 else 0:.2f}%")
                     print(f"Remaining Games: {selected_games[num_games_evaluated:]}")
 
                     total_seconds = int(cumulative_runtime * 60)
