@@ -213,9 +213,9 @@ if __name__ == "__main__":
                     belief_state_pattern = r"Belief State: (.*)"
                     matches = re.findall(belief_state_pattern, chat_text, re.IGNORECASE)
                     if matches:
-                        agent.prev_episodic_memories.append({"episode": num_games_evaluated, "task_outcome": agent.task_status , "memory": matches})
+                        agent.prev_episodic_memories.append({"episode_number": num_games_evaluated, "task_outcome": agent.task_status , "memory": matches})
                     else:
-                        agent.prev_episodic_memories.append({"episode": num_games_evaluated, "task_outcome": agent.task_status , "memory": agent.curr_episodic_memory})
+                        agent.prev_episodic_memories.append({"episode_number": num_games_evaluated, "task_outcome": agent.task_status , "memory": agent.curr_episodic_memory})
 
                     # Evaluate and log success
                     elapsed_minutes = (end_time - start_time) / 60

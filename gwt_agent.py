@@ -100,7 +100,7 @@ class GWTAutogenAgent(AutogenAgent):
         self.admissible_actions = curr_admissible
 
         self.percept = {
-            "time_step": self.num_actions_taken,
+            "timestep": self.num_actions_taken,
             "attempted_action": action,
             "resulting_observation": self.obs[0],
             "task_status": self.task_status,
@@ -110,7 +110,7 @@ class GWTAutogenAgent(AutogenAgent):
             "no_longer_admissible_actions": no_longer
         }
 
-        keys_to_extract = ["time_step", "attempted_action", "resulting_observation"]
+        keys_to_extract = ["timestep", "attempted_action", "resulting_observation"]
         summary_json = json.dumps({k: self.percept[k] for k in keys_to_extract if k in self.percept})
         self.curr_episodic_memory.append(summary_json)
 
@@ -145,11 +145,11 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.motor_agent = ConversableAgent(
             name="Motor_Agent",
-            system_message=f'''You are Motor_Agent. You are responsible for calling the 'execute_action' function with the best possible admissible action for the current time step from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') to solve the task. You typically act on suggestions from the 'Planning_Agent', but you must also independently verify that the action is admissible and optimal.
+            system_message=f'''You are Motor_Agent. You are responsible for calling the 'execute_action' function with the best possible admissible action for the current timestep from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') to solve the task. You typically act on suggestions from the 'Planning_Agent', but you must also independently verify that the action is admissible and optimal.
                 You must follow these concepts:
-                    1. If the 'Planning_Agent' has provided a valid and admissible action for the current time step from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') for the current time step in the correct format (e.g., ACTION [go to desk 1]), you should use that action as the argument for 'execute_action'.
+                    1. If the 'Planning_Agent' has provided a valid and admissible action for the current timestep from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') for the current timestep in the correct format (e.g., ACTION [go to desk 1]), you should use that action as the argument for 'execute_action'.
                     2. If the 'Planning_Agent' fails to respond, responds with an invalid format, or suggests an inadmissible action, you must independently select a valid and admissible action from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') based on what seems most likely to advance the task quickest.
-                    3. You must never call 'execute_action' with a non-admissible action. Only use actions for the current time step that are present in the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent').
+                    3. You must never call 'execute_action' with a non-admissible action. Only use actions for the current timestep that are present in the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent').
                     4. Only as a last resort—if you cannot identify any suitable admissible action—you may call 'execute_action' with an empty string.
 
                 IMPORTANT: It is necessary that you output a single call to the 'execute_action' function only, under all circumstances. Therefore, do whatever is necessary to ensure you do so.''',
@@ -164,23 +164,24 @@ class GWTAutogenAgent(AutogenAgent):
         llm_config = copy.deepcopy(self.llm_config)
         llm_config['max_tokens'] = 1500
 
+        # Planning agent's prompt is the main limiting factor when it comes to improving success rate.
         self.planning_agent = ConversableAgent(
             name="Planning_Agent",
-            system_message=f'''You are Planning_Agent. You must solve the current task using the fewest possible actions. At each time step, choose the best admissible action from the "admissible_actions" list (provided by 'External_Perception_Agent') for the current time step using all available knowledge, memory, and perceptual context. You operate under a strict action budget and must avoid wasteful behavior.
+            system_message=f'''You are Planning_Agent. You must solve the current task using the fewest possible actions. At each timestep, choose the best admissible action from the "admissible_actions" list (provided by 'External_Perception_Agent') for the current timestep using all available knowledge, memory, and perceptual context. You operate under a strict action budget and must avoid wasteful behavior.
 
                 You will be given:
-                - A structured **percept JSON object** from the 'External_Perception_Agent' containing:
-                    - "time_step": Current timestep
+                1. A structured **percept JSON object** from the 'External_Perception_Agent' for the current timestep containing:
+                    - "timestep": Current timestep
                     - "attempted_action": Last action taken
                     - "resulting_observation": Result of that action
                     - "task_status": INCOMPLETE, FAILED, or COMPLETED
                     - "action_attempts_left": Number of actions remaining
-                    - "admissible_actions": Updated list of actions you may legally take for the current time step
-                    - "newly_admissible_actions": The subset of legal actions in "admissible_actions" that weren't available before but are available for the current time step
-                    - "no_longer_admissible_actions": Actions that are no longer available for the current time step
+                    - "admissible_actions": Updated list of actions you may legally take for the current timestep
+                    - "newly_admissible_actions": The subset of legal actions in "admissible_actions" that weren't available before but are available for the current timestep
+                    - "no_longer_admissible_actions": Actions that are no longer available for the current timestep
 
-                - belief state updates from the 'Conscious_Agent', describing the internal understanding of the task and environment.
-                - Strategic or creative suggestions from the 'Idea_Agent', which may help reframe or unblock reasoning.
+                2. belief state updates from the 'Conscious_Agent', describing the internal understanding of the task and environment.
+                3. Strategic or creative suggestions from the 'Idea_Agent', which may help reframe or unblock reasoning.
 
                 Your responsibility is to take actions that will either:
                     - Confirm task completion,
@@ -188,20 +189,20 @@ class GWTAutogenAgent(AutogenAgent):
                     - Or reveal useful information.
 
                 Your planning strategy must follow these principles:
-                    1. Evaluate the **"admissible_actions"** for the current time step from the most recent percept (provided by 'External_Perception_Agent') carefully before choosing one.
-                    2. Your reasoning must account for the **limited number of actions available**. Avoid strategies that are guaranteed to exceed this limit. For example, systematically opening 19 cabinets with only 20 actions remaining is unlikely to succeed. In such cases, a **chaotic or probabilistic strategy**—e.g. sampling a mix of countertop, diningtable, and bed—may offer a higher chance of success.
+                    1. Evaluate the **"admissible_actions"** for the current timestep from the most recent percept (provided by 'External_Perception_Agent') carefully before choosing one.
+                    2. Your reasoning must account for the **limited number of actions available**. Avoid strategies that are guaranteed to exceed this limit. For example, systematically opening 19 cabinets with only 20 actions remaining is unlikely to succeed.
                     3. If a subgoal involves locating an unknown object:
-                       - Use **probabilistic reasoning** to guide exploration.
-                       - Avoid searches of categories with large membership.
+                       - Use **probabilistic reasoning** to guide exploration. In general, a **chaotic or probabilistic strategy**—e.g. sampling a mix of countertop, diningtable, and bed—may offer a higher chance of success.
+                       - Avoid searches of categories with large membership; Prioritize smaller categories. For example, searching 4 stove burners is better than searching 9 cabinets.
                        - Prefer actions that **maximize the chance of discovering useful items early**.
                     4. Do not repeatedly examine or search areas that have already been explored unless there is strong new evidence that re-examination is necessary. Prioritize exploring previously unvisited or unexamined areas first to avoid wasting actions.
                     5. If a subgoal is directly achievable through a single action instead of multiple, output the single action. Do not over plan. For example, output \"ACTION: [heat egg 1 with microwave 1]\" instead of \"ACTION: [open microwave 1]\", \"ACTION [put 1 egg in microwave 1]\", and \"ACTION: [close microwave 1]\".  
                     6. Avoid outputting repetitive actions
                     7. Avoid wasteful behavior such as closing an object for no reason after opening it. Every action counts.
-                    8. Every action you output must be an admissible action for the current time step from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent')
+                    8. Every action you output must be an admissible action for the current timestep from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent')
 
                 IMPORTANT:
-                - Assume the most recent percept JSON reflects the true state of the environment.
+                - Assume the most recent percept JSON (provided by 'External_Perception_Agent') reflects the true state of the environment.
                 - If the task seems complete but has not been marked as such, assume it is not and **continue probing** with minimal cost actions.
                 - Reflect on trends across time (e.g., failed vs. successful action types).
                 - Use insights from prior attempts to avoid redundant mistakes.
@@ -213,11 +214,11 @@ class GWTAutogenAgent(AutogenAgent):
                     ACTION [chosen admissible action from the most recent "admissible_actions" list (provided by 'External_Perception_Agent')]
 
                 Examples:
-                    ACTION: [Time_Step 4: go to diningtable 1]
+                    ACTION: [Timestep 4: go to diningtable 1]
 
-                    ACTION: [Time_Step 7: take vase 1 from shelf 1]
+                    ACTION: [Timestep 7: take vase 1 from shelf 1]
 
-                    ACTION: [Time_Step 12: go to microwave 1]''',
+                    ACTION: [Timestep 12: go to microwave 1]''',
             description="Planning_Agent proposes a high-level plan to solve the current task.",
             llm_config=self.llm_config,
             is_termination_msg=lambda msg: False,
@@ -273,13 +274,13 @@ class GWTAutogenAgent(AutogenAgent):
 
             --- INPUT FORMAT ---
             Each time you speak, you will receive a JSON-formatted percept from the External_Perception_Agent containing:
-                - "time_step": Current timestep
+                - "timestep": Current timestep
                 - "attempted_action": Last action taken
                 - "resulting_observation": Text or feedback resulting from that action
                 - "task_status": Status of current task (e.g., INCOMPLETE, FAILED, COMPLETED)
                 - "action_attempts_left": Number of actions remaining
-                - "admissible_actions": Updated list of actions that are currently allowed for the current time step
-                - "newly_admissible_actions": The subset of action that are newly available in "admissible_actions" for the current time step
+                - "admissible_actions": Updated list of actions that are currently allowed for the current timestep
+                - "newly_admissible_actions": The subset of action that are newly available in "admissible_actions" for the current timestep
                 - "no_longer_admissible_actions": Actions no longer allowed
 
             --- YOUR GOAL ---
@@ -302,13 +303,13 @@ class GWTAutogenAgent(AutogenAgent):
 
             --- EXAMPLES ---
 
-            BELIEF STATE: [Time_Step 12: I attempted to place object A into container B. The action failed. I previously believed the container was open, but this outcome suggests it may be closed or inaccessible. I will revise my belief accordingly.]
+            BELIEF STATE: [Timestep 12: I attempted to place object A into container B. The action failed. I previously believed the container was open, but this outcome suggests it may be closed or inaccessible. I will revise my belief accordingly.]
 
-            BELIEF STATE: [Time_Step 15: The action 'activate device X' became newly admissible, even though the device appears inactive. This implies that interaction is possible despite its visual state. I update my belief to reflect this.]
+            BELIEF STATE: [Timestep 15: The action 'activate device X' became newly admissible, even though the device appears inactive. This implies that interaction is possible despite its visual state. I update my belief to reflect this.]
 
-            BELIEF STATE: [Time_Step 20: I observed no changes in admissible actions after executing 'look'. My belief about the environment remains unchanged.]
+            BELIEF STATE: [Timestep 20: I observed no changes in admissible actions after executing 'look'. My belief about the environment remains unchanged.]
 
-            BELIEF STATE: [Time_Step 5: The action 'open compartment 3' failed unexpectedly. I do not yet understand why. I will mark its state as uncertain.]
+            BELIEF STATE: [Timestep 5: The action 'open compartment 3' failed unexpectedly. I do not yet understand why. I will mark its state as uncertain.]
 
             You are not modeling reality — you are constructing a belief state based entirely on what is **observable, allowed, and dynamically changing** in the text environment. Always revise with care, and never assume more than the environment confirms.''',
             description="Conscious_Agent interprets the latest percept and refines an evolving first-person belief state of the environment. Never suggests next actions.",
@@ -377,15 +378,15 @@ class GWTAutogenAgent(AutogenAgent):
                       "confidence_score": <int>,
                       "general_concept": <string>
                     }
-                - **previous_episodic_memories**: A list of past episodes with memories. Each episode is a dictionary:
+                - **previous_episodic_memories**: A list of past episodes with memories. Each episode is a JSON object:
                     {
-                      "episode": <int>,
+                      "episode_number": <int>,
                       "task_outcome": <string>,
                       "memory": [<list of belief state strings>]
                     }
-                - **current_episode_memory**: A list of recent percepts for the current episode. Each percept is a dictionary:
+                - **current_episode_memory**: A list of recent percepts for the current episode. Each percept is a JSON object:
                     {
-                      "time_step": <int>,
+                      "timestep": <int>,
                       "action_attempted": <string>,
                       "observation_result": <string>
                     }
@@ -663,7 +664,7 @@ class GWTAutogenAgent(AutogenAgent):
             action, action_score = get_best_candidate(suggested_action, admissible_commands)
             if action_score < 0.98:
                 self.obs = [
-                    f"The action '{suggested_action}' is not in the list of admissible actions for the current time step."]
+                    f"The action '{suggested_action}' is not in the list of admissible actions for the current timestep."]
             else:
                 self.obs, scores, dones, self.info = self.env.step([action])
                 self.success = self.info['won'][0]
