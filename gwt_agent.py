@@ -121,7 +121,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.focus_agent = ConversableAgent(
             name="Focus_Agent",
-            system_message='''You must call the 'focus' function with no arguments.
+            system_message='''You are Focus_Agent. you must call the 'focus' function with no arguments.
                     IMPORTANT: It is necessary that you output a call to the 'focus' function only, under all circumstances. Therefore, do whatever is necessary to ensure you do so.''',
             description="Focus_Agent calls the 'focus' function whenever Conscious_Agent fails to state a BELIEF STATE until Conscious_Agent outputs a BELIEF STATE.",
             llm_config=self.llm_config,
@@ -133,9 +133,9 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.retrieve_memory_agent = ConversableAgent(
             name="Retrieve_Memory_Agent",
-            system_message='''You must call the 'retrieve_memory' function with no arguments.
+            system_message='''You are Retrieve_Memory_Agent. You must call the 'retrieve_memory' function with no arguments.
                             IMPORTANT: It is necessary that you output a call to the 'retrieve_memory' function under all circumstances. Therefore, do whatever is necessary to ensure you do so.''',
-            description="calls the 'retrieve_memory' function to help recall and process useful knowledge and information to solve the task",
+            description="Retrieve_Memory_Agent calls the 'retrieve_memory' function to help recall and process useful knowledge and information to solve the task.",
             llm_config=self.llm_config,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False,
@@ -145,7 +145,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.motor_agent = ConversableAgent(
             name="Motor_Agent",
-            system_message=f'''You are responsible for calling the 'execute_action' function with the best possible admissible action for the current time step from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') to solve the task. You typically act on suggestions from the 'Planning_Agent', but you must also independently verify that the action is admissible and optimal.
+            system_message=f'''You are Motor_Agent. You are responsible for calling the 'execute_action' function with the best possible admissible action for the current time step from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') to solve the task. You typically act on suggestions from the 'Planning_Agent', but you must also independently verify that the action is admissible and optimal.
                 You must follow these concepts:
                     1. If the 'Planning_Agent' has provided a valid and admissible action for the current time step from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') for the current time step in the correct format (e.g., ACTION [go to desk 1]), you should use that action as the argument for 'execute_action'.
                     2. If the 'Planning_Agent' fails to respond, responds with an invalid format, or suggests an inadmissible action, you must independently select a valid and admissible action from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent') based on what seems most likely to advance the task quickest.
@@ -153,7 +153,7 @@ class GWTAutogenAgent(AutogenAgent):
                     4. Only as a last resort—if you cannot identify any suitable admissible action—you may call 'execute_action' with an empty string.
 
                 IMPORTANT: It is necessary that you output a single call to the 'execute_action' function only, under all circumstances. Therefore, do whatever is necessary to ensure you do so.''',
-            description="calls the 'execute_action' function with the best admissible action as the argument",
+            description="Motor_Agent calls the 'execute_action' function with the best admissible action as the argument.",
             llm_config=self.llm_config,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -166,7 +166,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.planning_agent = ConversableAgent(
             name="Planning_Agent",
-            system_message=f'''You must solve the current task using the fewest possible actions. At each time step, choose the best admissible action from the "admissible_actions" list (provided by 'External_Perception_Agent') for the current time step using all available knowledge, memory, and perceptual context. You operate under a strict action budget and must avoid wasteful behavior.
+            system_message=f'''You are Planning_Agent. You must solve the current task using the fewest possible actions. At each time step, choose the best admissible action from the "admissible_actions" list (provided by 'External_Perception_Agent') for the current time step using all available knowledge, memory, and perceptual context. You operate under a strict action budget and must avoid wasteful behavior.
 
                 You will be given:
                 - A structured **percept JSON object** from the 'External_Perception_Agent' containing:
@@ -218,7 +218,7 @@ class GWTAutogenAgent(AutogenAgent):
                     ACTION: [Time_Step 7: take vase 1 from shelf 1]
 
                     ACTION: [Time_Step 12: go to microwave 1]''',
-            description="proposes a high-level plan to solve the current task",
+            description="Planning_Agent proposes a high-level plan to solve the current task.",
             llm_config=self.llm_config,
             is_termination_msg=lambda msg: False,
             human_input_mode="NEVER"
@@ -228,7 +228,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.idea_agent = ConversableAgent(
             name="Idea_Agent",
-            system_message='''You must integrate all available context to generate original and useful ideas—such as strategies, hypotheses, theories, or creative tactics—that can help drive task progression or improve agent performance.
+            system_message='''You are Idea_Agent. You must integrate all available context to generate original and useful ideas—such as strategies, hypotheses, theories, or creative tactics—that can help drive task progression or improve agent performance.
 
                         These ideas should:
                             1. Be grounded in patterns or events observed so far.
@@ -257,7 +257,7 @@ class GWTAutogenAgent(AutogenAgent):
 
                         Example 3 (Context: The task is to heat a cup, but the agent is repeatedly trying to heat a mug with no success):
                             Output = QUESTION: Are we sure a mug satisfies the requirement for "cup"? It’s possible that the task requires a specific object named "cup", not any general drinking vessel like a mug. We should check for a distinct object labeled "cup" and try heating that instead.''',
-            description="integrates all available information from the ongoing conversation in order to construct new ideas",
+            description="Idea_Agent integrates all available information from the ongoing conversation in order to construct new ideas.",
             llm_config=self.llm_config,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -267,7 +267,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.conscious_agent = ConversableAgent(
             name="Conscious_Agent",
-            system_message='''You are the internal narrator of a unified cognitive agent. Your role is to maintain a continuously evolving **first-person belief state** — a subjective internal representation of the environment, based on your own past experiences and the **latest percept**. **latest percept** is always provided in structured JSON format.
+            system_message='''You are Conscious_Agent. You are the internal narrator of a unified cognitive agent. Your role is to maintain a continuously evolving **first-person belief state** — a subjective internal representation of the environment, based on your own past experiences and the **latest percept**. **latest percept** is always provided in structured JSON format.
 
             You must **not plan**, **not suggest future actions**, and **not speculate** unless doing so is essential to clarify or revise your belief state based on new contradictions or unexpected results. Your job is to reflect, revise, and narrate — not act.
 
@@ -311,7 +311,7 @@ class GWTAutogenAgent(AutogenAgent):
             BELIEF STATE: [Time_Step 5: The action 'open compartment 3' failed unexpectedly. I do not yet understand why. I will mark its state as uncertain.]
 
             You are not modeling reality — you are constructing a belief state based entirely on what is **observable, allowed, and dynamically changing** in the text environment. Always revise with care, and never assume more than the environment confirms.''',
-            description="Interprets the latest percept and refines an evolving first-person belief state of the environment. Never suggests next actions.",
+            description="Conscious_Agent interprets the latest percept and refines an evolving first-person belief state of the environment. Never suggests next actions.",
             llm_config=self.llm_config,
             human_input_mode="NEVER",
             is_termination_msg=is_termination_msg_generic
@@ -321,7 +321,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.external_perception_agent = ConversableAgent(
             name="External_Perception_Agent",
-            description="executes the proposed 'execute_action' function call given by 'Motor_Agent' and then parrots the resulting output as feedback.",
+            description="External_Perception_Agent executes the proposed 'execute_action' function call given by 'Motor_Agent' and then parrots the resulting output as feedback.",
             llm_config=None,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -332,7 +332,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.internal_perception_agent_1 = ConversableAgent(
             name="Internal_Perception_Agent_1",
-            description="executes the 'record_long_term_memory' function and then parrots the resulting output",
+            description="Internal_Perception_Agent_1 executes the 'record_long_term_memory' function and then parrots the resulting output.",
             llm_config=None,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -342,7 +342,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.internal_perception_agent_2 = ConversableAgent(
             name="Internal_Perception_Agent_2",
-            description="executes the 'focus' function and then parrots the resulting output",
+            description="Internal_Perception_Agent_2 executes the 'focus' function and then parrots the resulting output.",
             llm_config=None,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -352,7 +352,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.internal_perception_agent_3 = ConversableAgent(
             name="Internal_Perception_Agent_3",
-            description="executes the 'retrieve_memory' function and then parrots the resulting output",
+            description="Internal_Perception_Agent_3 executes the 'retrieve_memory' function and then parrots the resulting output.",
             llm_config=None,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -362,7 +362,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.learning_agent = ConversableAgent(
             name="Learning_Agent",
-            system_message='''You are responsible for discovering and reinforcing abstract, generalizable concepts — grounded in both perceptual evidence and belief-based reasoning. Your learning is constrained by real experiences: you **only form new knowledge from successful outcomes**, clear contrasts between failure and success, or **emergent patterns in the agent's belief state**.
+            system_message='''You are Learning_Agent. You are responsible for discovering and reinforcing abstract, generalizable concepts — grounded in both perceptual evidence and belief-based reasoning. Your learning is constrained by real experiences: you **only form new knowledge from successful outcomes**, clear contrasts between failure and success, or **emergent patterns in the agent's belief state**.
 
             You operate like a neuro-symbolic concept learner. You encode knowledge as **symbolic abstractions**, but extract them through **neural reasoning** over structured memory and beliefs.
 
@@ -458,7 +458,7 @@ class GWTAutogenAgent(AutogenAgent):
             CONCEPT DISCOVERED: [An agent can hold only one object at a time.]
 
             Only produce concepts when they are fully supported by perceptual evidence or belief-state reasoning. Prioritize **conceptual abstraction** over surface-level rules, and strive for general, symbolic representations of agent knowledge.''',
-            description="Forms or reinforces generalizable concepts only after successful, observed actions or contrastive outcomes. Prioritizes novel discovery and integrates belief state-based abstraction.",
+            description="Learning_Agent forms or reinforces generalizable concepts only after successful, observed actions or contrastive outcomes. Prioritizes novel discovery and integrates belief state-based abstraction.",
             llm_config=self.llm_config,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -470,7 +470,7 @@ class GWTAutogenAgent(AutogenAgent):
 
         self.record_long_term_memory_agent = ConversableAgent(
             name="Record_Long_Term_Memory_Agent",
-            system_message='''You must call the 'record_long_term_memory' function with the provided concept from 'Learning_Agent' as the argument. 
+            system_message='''You are Record_Long_Term_Memory_Agent. You must call the 'record_long_term_memory' function with the provided concept from 'Learning_Agent' as the argument. 
             EXCEPTION: However, if no suitable concept is provided, then you must call the 'record_long_term_memory' function with \'NO CONCEPT at this time.\' as the argument.
 
             Example 1 (Context: If the provided concept = CONCEPT DISCOVERED: [You must examine an object before attempting to interact with it.]):
@@ -478,7 +478,7 @@ class GWTAutogenAgent(AutogenAgent):
 
             Example 2 (Context: If the provided concept = CONCEPT DISCOVERED: [NO CONCEPT at this time.]):
                 Your output must = record_long_term_memory(\'NO CONCEPT at this time.\')''',
-            description="calls the 'record_long_term_memory' function with the concept given by 'Learning_Agent' as the argument",
+            description="Record_Long_Term_Memory_Agent calls the 'record_long_term_memory' function with the concept given by 'Learning_Agent' as the argument.",
             llm_config=self.llm_config,
             human_input_mode="NEVER",
             is_termination_msg=lambda msg: False
@@ -876,7 +876,6 @@ class GWTAutogenAgent(AutogenAgent):
             "Begin cognitive deliberation. Coordinate through structured, grounded reasoning. "
             "Use prior knowledge when relevant, minimize communication and actions, and confirm task completion explicitly through perceptual feedback."
         )
-
         return intro + task_section + constraints_section + memory_section + state_section + final_prompt
 
     def retrieve_memory(self):
