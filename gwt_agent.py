@@ -858,8 +858,7 @@ class GWTAutogenAgent(AutogenAgent):
         constraints_section = (
             f"--- ENVIRONMENTAL CONSTRAINTS ---\n"
             f"- Max chat rounds allowed: {self.max_chat_round} (represents internal cognitive transitions).\n"
-            f"- Max environment actions allowed: {self.max_actions} (physical interactions only).\n"
-            f"- You must choose actions only from the list of admissible_actions in the percept JSON.\n\n"
+            f"- Max environment actions allowed: {self.max_actions} (physical interactions only).\n\n"
         )
 
         memory_section = "--- PRIOR KNOWLEDGE & EPISODIC MEMORY ---\n"
