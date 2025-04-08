@@ -91,7 +91,7 @@ class AutogenAgent:
         result_path = os.path.join(game_path, "result.txt")
         error_message_path = os.path.join(game_path, "error_message.txt")
 
-        # get all the previous game path
+        # get all the previous game pathF
         previous_game_path = [os.path.join(self.log_path, f"game_{i}") for i in range(self.game_no)]
         previous_rule_path = [os.path.join(game_path, "rules.txt") for game_path in previous_game_path]
 

@@ -123,7 +123,7 @@ class GWTAutogenAgent(AutogenAgent):
             name="Focus_Agent",
             system_message='''You must call the 'focus' function with no arguments.
                     IMPORTANT: It is necessary that you output a call to the 'focus' function only, under all circumstances. Therefore, do whatever is necessary to ensure you do so.''',
-            description="calls the 'focus' function to reset focus on solving the task",
+            description="Focus_Agent calls the 'focus' function whenever Conscious_Agent fails to state a BELIEF STATE until Conscious_Agent outputs a BELIEF STATE.",
             llm_config=self.llm_config,
             is_termination_msg=lambda msg: False,
             human_input_mode="NEVER"
@@ -164,29 +164,6 @@ class GWTAutogenAgent(AutogenAgent):
         llm_config = copy.deepcopy(self.llm_config)
         llm_config['max_tokens'] = 1500
 
-        '''You must solve the current task using the fewest possible actions. At each step, you must choose the most efficient admissible action based on current knowledge and the available action budget.
-
-                IMPORTANT: If you believe the task *should* be complete, but the environment has not marked it as complete, you must continue exploring possible next steps or verifying task state through further actions. Do **not** stop or ask for external help.
-
-                Your responsibility is to take actions that will either:
-                    - Confirm task completion,
-                    - Progress the task toward completion,
-                    - Or reveal useful information.
-
-                Your planning strategy must follow these principles:
-                    1. Always evaluate the **currently admissible actions** from the most recent list provided by the 'External_Perception_Agent' before making a decision.
-                    2. Your reasoning must account for the **limited number of actions available**. Avoid strategies that are guaranteed to exceed this limit. For example, systematically opening 19 cabinets with only 20 actions remaining is unlikely to succeed. In such cases, a **chaotic or probabilistic strategy**—e.g. sampling a mix of countertop, diningtable, and bed—may offer a higher chance of success.
-                    3. If a subgoal involves locating an unknown object:
-                       - Use **probabilistic reasoning** to guide exploration.
-                       - Avoid exhaustive searches of large categories.
-                       - Prefer actions that **maximize the chance of discovering useful items early**.
-                    4. Do not repeatedly examine or search areas that have already been explored unless there is strong new evidence that re-examination is necessary. Prioritize exploring previously unvisited or unexamined areas first to avoid wasting actions.
-                    5. If an object or goal is already known and directly accessible, **act immediately to exploit it**. Do not delay or over-plan.
-                    6. You may maintain a high-level plan internally, but you should **only describe your plan if it has changed meaningfully**. Repeating an unchanged plan wastes space and should be avoided.
-
-                You must always output a single admissible action in the following format:
-                    ACTION [chosen admissible action]'''
-
         self.planning_agent = ConversableAgent(
             name="Planning_Agent",
             system_message=f'''You must solve the current task using the fewest possible actions. At each time step, choose the best admissible action from the "admissible_actions" list (provided by 'External_Perception_Agent') for the current time step using all available knowledge, memory, and perceptual context. You operate under a strict action budget and must avoid wasteful behavior.
@@ -218,7 +195,7 @@ class GWTAutogenAgent(AutogenAgent):
                        - Avoid searches of categories with large membership.
                        - Prefer actions that **maximize the chance of discovering useful items early**.
                     4. Do not repeatedly examine or search areas that have already been explored unless there is strong new evidence that re-examination is necessary. Prioritize exploring previously unvisited or unexamined areas first to avoid wasting actions.
-                    5. If a subgoal is directly achievable through a single action instead of multiple, output the single action. Do not over plan. For example, output heat egg 1 with microwave 1 instead of open microwave 1. 
+                    5. If a subgoal is directly achievable through a single action instead of multiple, output the single action. Do not over plan. For example, output \"ACTION: [heat egg 1 with microwave 1]\" instead of \"ACTION: [open microwave 1]\", \"ACTION [put 1 egg in microwave 1]\", and \"ACTION: [close microwave 1]\".  
                     6. Avoid outputting repetitive actions
                     7. Avoid wasteful behavior such as closing an object for no reason after opening it. Every action counts.
                     8. Every action you output must be an admissible action for the current time step from the most recent \"admissible_actions\" list (provided by 'External_Perception_Agent')
@@ -382,16 +359,6 @@ class GWTAutogenAgent(AutogenAgent):
         )
         self.agents_info[self.internal_perception_agent_3.name] = {"Prompt": None,
                                                                    "Description": self.internal_perception_agent_3.description}
-
-        """self.memory_summarizer_agent = ConversableAgent(
-            name="Memory_Summarizer_Agent",
-            system_message="You must execute the 'retrieve_memory' function and then summarize the all the information for solving the task that is within the resulting output.",
-            description = "executes the 'retrieve_memory' function and then summarizes the all information for solving the task that is within the resulting output",
-            llm_config=self.llm_config,
-            human_input_mode="NEVER",
-            is_termination_msg=lambda msg: False,
-        )
-        self.agents_info[self.memory_summarizer_agent.name] = {"Prompt": self.memory_summarizer_agent.system_message, "Description": self.memory_summarizer_agent.description}"""
 
         self.learning_agent = ConversableAgent(
             name="Learning_Agent",
@@ -598,7 +565,7 @@ class GWTAutogenAgent(AutogenAgent):
         memory1_path = os.path.join(memory_path, "memory1.txt")
         memory2_path = os.path.join(memory_path, "memory2.txt")
         result_dict_path = os.path.join(self.log_path, "result_dict.txt")
-        agents_info_path = os.path.join(self.log_path, "agents_info.txt")
+        agents_info_path = os.path.join(self.log_path, "agents_info.json")
         start_memory1_path = os.path.join(self.log_path, "start_memory1.txt")
         end_memory1_path = os.path.join(self.log_path, "end_memory1.txt")
         start_memory2_path = os.path.join(self.log_path, "start_memory2.txt")
