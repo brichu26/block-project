@@ -881,7 +881,8 @@ class GWTAutogenAgent(AutogenAgent):
     def retrieve_memory(self):
         random_episodic_memories = self.prev_episodic_memories
         if len(random_episodic_memories) >= 5:
-            random_episodic_memories = sorted(random.sample(self.prev_episodic_memories, 5), key=lambda x: x['episode'])
+            random_episodic_memories = sorted(random.sample(self.prev_episodic_memories, 5),
+                                              key=lambda x: x['episode_number'])
 
         self.memory = json.dumps(
             {"knowledge": self.knowledge, "previous_episodic_memories": random_episodic_memories,
