@@ -1,53 +1,57 @@
-from github_evaluator import fetch_github_repo_info, evaluate_github_metrics
-from server_evaluator import evaluate_performance_scalability, evaluate_security_reliability, evaluate_documentation_developer_experience
+from github_evaluator import get_popularity_score, get_documentation_score
+import json
+import requests
+from datetime import datetime, timedelta
 
-def evaluate_server(repo_url, weights):
-    repo_data = fetch_github_repo_info(repo_url)
-
-    if not repo_data:
-        print("Failed to fetch data from GitHub.")
-        return
-
-    # Evaluate GitHub Metrics
-    popularity_score, activity_score = evaluate_github_metrics(repo_data)
-
-    # Evaluate other metrics
-    #performance_scalability_score = evaluate_performance_scalability()
-    #security_reliability_score = evaluate_security_reliability()
-    #documentation_experience_score = evaluate_documentation_developer_experience()
-
-    # Calculate total score with customizable weights
-    total_score = (
-        sum(popularity_score) * weights['popularity'] +
-        activity_score * weights['activity'] 
-        #sum(performance_scalability_score) * weights['performance_scalability'] +
-        #sum(security_reliability_score) * weights['security_reliability'] +
-        #sum(documentation_experience_score) * weights['documentation_experience']
-    )
-
-    print(f"Total Score for {repo_url}: {total_score:.2f}")
-
-if __name__ == '__main__':
-    repos = [
-        "JetBrains/mcp-jetbrains",
-        "stripe/agent-toolkit",
-        "googleapis/python-firestore",
-        "laulauland/bluesky-context-server",
-        "openbnb-org/mcp-server-airbnb",
-        "delorenj/mcp-server-ticketmaster",
-        "financial-datasets/mcp-server"
-        
-
-    ]
-
-    # Define the weights for each category
-    weights = {
-        'popularity': 0.4,
-        'activity': 0.1,
-        'performance_scalability': 0.2,
-        'security_reliability': 0.2,
-        'documentation_experience': 0.1,
+def fetch_and_save_pulsemcp_servers(num_servers):
+    url = "https://api.pulsemcp.com/v0beta/servers"
+    headers = {
+        "User-Agent": "MyToolManager/1.0 (https://mytoolmanager.com)"
     }
+    params = {
+        "count_per_page": num_servers
+    }
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        servers = data.get("servers", [])
+        cleaned_servers = []
+        for s in servers:
+            source_code_url = s.get("source_code_url")
+            if source_code_url:
+                # Extract owner and repo name from the source_code_url
+                parts = source_code_url.rstrip('/').split('/')
+                if len(parts) >= 2:
+                    owner, repo = parts[-2], parts[-1]
+                    cleaned_servers.append({
+                        "owner": owner,
+                        "repo": repo
+                    })
+        # Save to JSON
+        with open("pulsemcp_servers.json", "w") as f:
+            json.dump(cleaned_servers, f, indent=2)
 
-    for repo in repos:
-        evaluate_server(repo, weights)
+        print(f" Saved {len(cleaned_servers)} server(s) to pulsemcp_servers.json")
+
+    except requests.exceptions.RequestException as e:
+        print(f" API call failed: {e}")
+
+#fetch_and_save_pulsemcp_servers(100) #save pulsemcp servers to json
+
+#load the saved servers
+with open("pulsemcp_servers.json", "r") as f:
+    servers = json.load(f)
+
+for server in servers[:5]:
+    owner = server["owner"]
+    repo = server["repo"]
+    # Fetch GitHub popularity score 
+    repo_score = get_popularity_score(owner, repo)
+    #print(f"Popularity score for {owner}/{repo}: {repo_score}")
+    doc_score = get_documentation_score(owner, repo)
+    #print(f"doc score for {owner}/{repo}: {doc_score}")
+    url = f"https://api.github.com/repos/{owner}/{repo}/readme"
+    #print(f"Repo URL: {url}")
+
+
