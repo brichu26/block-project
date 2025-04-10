@@ -1,0 +1,84 @@
+=== Summary Output ===
+Loaded conversation:
+User: Hey, can you help me plan my day?  
+AI: Sure! What do you have on your agenda?
+
+User: I have a meeting at 10 AM, then I need to work on a presentation, and maybe go for a run.  
+AI: Sounds good! Would you like me to block out time for each item or just give you a checklist?
+
+User: A checklist would be great.  
+AI: Got it. 1. Prepare for 10 AM meeting. 2. Work on presentation. 3. Go for a run.
+
+User: Thanks! Now, quick question: what's the difference between machine learning and deep learning?  
+AI: Great question! Machine learning is a broad field that includes any system that learns from data. Deep learning is a subset of machine learning that uses neural networks with many layers.
+
+User: So all deep learning is machine learning, but not the other way around?  
+AI: Exactly.
+
+User: Can you give an example of a deep learning application?  
+AI: Sure! Image recognition, like how your phone unlocks with your face, is a common use of deep learning.
+
+User: That’s cool. Switching gears—can you explain how interest works in savings accounts?  
+AI: Absolutely. When you deposit money into a savings account, the bank pays you interest, usually as a percentage of your balance. The more money and time, the more interest you earn.
+
+User: Is it always simple interest?  
+AI: No, most savings accounts use compound interest, which means you earn interest on your original deposit and also on previously earned interest.
+
+User: Got it. Oh and what’s your take on time management strategies?  
+AI: There are many! One popular method is the Pomodoro Technique: work for 25 minutes, then take a 5-minute break. Another is time blocking—allocating fixed time slots for tasks.
+
+User: I’ve tried Pomodoro but find it hard to stay consistent. Any tips?  
+AI: You might try habit stacking—pairing Pomodoro with something you already do, like starting your session after making coffee. It builds a routine around an existing behavior.
+
+User: Interesting. Are there any apps that help with that?  
+AI: Yes, apps like Focus Keeper and Forest are great Pomodoro timers, and Habitica gamifies habit tracking by giving you points and rewards.
+
+User: Okay switching topics—how should I think about data privacy with AI tools?  
+AI: A good rule of thumb is: if you wouldn’t say it in a public forum, don’t type it into an AI tool. Always check if your data is being stored or used for training.
+
+User: So are chats like this stored?  
+AI: That depends on the platform. Some services store conversations to improve models, others offer privacy modes. Always check the tool’s data policy.
+
+User: Thanks. Can you summarize what we’ve discussed today?  
+AI: Sure. We planned your day with a checklist, discussed machine learning vs. deep learning, savings account interest, time management strategies like Pomodoro, habit-building tools, and data privacy best practices.
+
+User: That’s a lot!  
+AI: It was a productive conversation! Let me know if you'd like to go deeper on any topic.
+Token count: 743
+
+=== Topic-Aware Summary ===
+Topic 1: A good rule of thumb is: if you wouldn't say it in a public forum, don't type it into an AI tool. Some services store conversations to improve models, others offer privacy modes.
+
+Topic 2: Pomodoro Technique: work for 25 minutes, then take a 5-minute break. Another is time blocking—allocating fixed time slots for tasks. AI: You might try habit stacking, starting your session after making coffee.
+
+Topic 3: Machine learning is any system that learns from data. Deep learning is a subset of machine learning that uses neural networks with many layers. Image recognition, like how your phone unlocks with your face, is a common use of deep learning.
+
+Topic 4: Always check if your data is being stored or used for training. Focus Keeper and Forest are great Pomodoro timers. Habitica gamifies habit tracking by giving you points and rewards.
+
+Topic 5: When you deposit money into a savings account, the bank pays you interest. Most savings accounts use compound interest, which means you earn interest on your original deposit and also on previously earned interest.
+
+=== Graph-Based Summary ===
+User: Can you give an example of a deep learning application? Oh and what’s your take on time management strategies? AI: There are many! AI: Yes, apps like Focus Keeper and Forest are great Pomodoro timers, and Habitica gamifies habit tracking by giving you points and rewards. We planned your day with a checklist, discussed machine learning vs. deep learning, savings account interest, time management strategies like Pomodoro, habit-building tools, and data privacy best practices.
+
+=== QA-Based Summary ===
+Q1: What kind of information does machine learning teach? What type of algorithm does deep learning make use of?<sep> What do savings account interest earn you?<sep> What is a great learning strategy?<sep> What is the Pomodoro Technique?
+
+Q2: What is a common use of deep learning?<sep> What is another name for compound interest?<sep> What is an example of a savings account that uses a single amount of money and time?<sep> What can you do when you start to earn interest in your accounts?<sep> What do you use a one time break to do using your savings account?<sep>
+
+Q3: What is machine learning?<sep> How does the bank of a savings account perform a strategy based on your data?<sep> What can happen to your data whenever you use what program?<sep> What is a common use of deep learning?<sep> What is one feature of compound interest in a savings account?<sep>
+
+Q4: What is the main difference between machine learning and deep learning?<sep> When you deposit money into a savings account the bank pays you interest, usually as a percentage of your balance.<sep> What is a good way to practice habit building?<sep> What is a common use of deep learning?<sep> Where do most savings accounts pay interest?<sep>
+
+Q5: What does AI do to help shape your day?<sep> What do most savings accounts do that gamifies your habits?<sep> If you want to talk more about machine learning that I am familiar with, it could be what?<sep> What is a common use of deep learning?<sep> What does Pomodoro technique do to encourage a new habit?<sep> What does Habitica do to encourage old habits?<sep>
+
+=== Topic-Based Evaluation ===
+Retention: 0.0
+Coherence: 0.31
+
+=== Graph-Based Evaluation ===
+Retention: 0.2
+Coherence: 0.25
+
+=== QA-Based Evaluation ===
+Retention: 0.0
+Coherence: 0.59
