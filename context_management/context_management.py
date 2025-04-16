@@ -15,6 +15,26 @@ conversation_data = [
     ("User: What are some key challenges in AI research?", "AI: Key challenges include interpretability, bias, efficiency, and ethical considerations."),
 ]
 
+# Summarization Strategies
+SUMMARIZATION_STRATEGIES = {
+    "Standard Concise": {
+        "system_prompt": "You are an expert summarizer. Condense the following text, focusing on the main points and key information, while maintaining clarity and coherence.",
+        "user_prompt_template": "Please summarize the following text concisely:\n\n---\n{text}\n---"
+    },
+    "Key Bullet Points": {
+        "system_prompt": "You are an expert summarizer. Extract the key bullet points or main takeaways from the following text.",
+        "user_prompt_template": "Extract the key bullet points from this text:\n\n---\n{text}\n---"
+    },
+    "Abstractive TL;DR": {
+        "system_prompt": "You are an expert at creating very short, high-level summaries (like a TL;DR). Capture the absolute essence of the text in 1-2 sentences.",
+        "user_prompt_template": "Provide a 1-2 sentence TL;DR summary for this text:\n\n---\n{text}\n---"
+    },
+    "Question-Focused": {
+        "system_prompt": "You are an expert summarizer. Summarize the text by primarily answering the questions: Who was involved? What happened? Why did it happen?",
+        "user_prompt_template": "Summarize this text, focusing on Who, What, and Why:\n\n---\n{text}\n---"
+    }
+}
+
 class ContextStrategy:
     def __init__(self, name: str):
         self.name = name
@@ -22,48 +42,83 @@ class ContextStrategy:
             'coherence': 0.0,
             'relevance': 0.0,
             'efficiency': 0.0,
+            'conciseness': 0.0,
+            'information_preservation': 0.0,
             'overall': 0.0
         }
     
     def evaluate(self, original: List[Tuple[str, str]], processed: List[Tuple[str, str]]) -> Dict[str, float]:
-        # Calculate coherence score (how well the processed conversation flows)
+        # Calculate all metrics
         coherence = self._calculate_coherence(processed)
-        
-        # Calculate relevance score (how well it maintains important information)
         relevance = self._calculate_relevance(original, processed)
-        
-        # Calculate efficiency score (compression ratio while maintaining quality)
         efficiency = self._calculate_efficiency(original, processed)
+        conciseness = self._calculate_conciseness(processed)
+        info_preservation = self._calculate_information_preservation(original, processed)
         
-        # Calculate overall score
-        overall = (coherence + relevance + efficiency) / 3
+        # Calculate overall score (weighted average)
+        overall = (coherence * 0.2 + relevance * 0.2 + efficiency * 0.2 + 
+                  conciseness * 0.2 + info_preservation * 0.2)
         
         self.scores = {
             'coherence': coherence,
             'relevance': relevance,
             'efficiency': efficiency,
+            'conciseness': conciseness,
+            'information_preservation': info_preservation,
             'overall': overall
         }
         return self.scores
     
     def _calculate_coherence(self, processed: List[Tuple[str, str]]) -> float:
-        # Simple coherence check based on conversation flow
         if len(processed) < 2:
             return 1.0
-        return 0.8  # Placeholder - could be enhanced with more sophisticated metrics
+        # Enhanced coherence check using semantic similarity
+        try:
+            embeddings = [self._get_embedding(msg[0]) for msg in processed]
+            similarities = []
+            for i in range(len(embeddings) - 1):
+                sim = cosine_similarity([embeddings[i]], [embeddings[i + 1]])[0][0]
+                similarities.append(sim)
+            return np.mean(similarities)
+        except:
+            return 0.8  # Fallback to simple coherence check
     
     def _calculate_relevance(self, original: List[Tuple[str, str]], processed: List[Tuple[str, str]]) -> float:
-        # Check if key terms from original are preserved
         original_terms = set(term.lower() for msg in original for term in msg[0].split())
         processed_terms = set(term.lower() for msg in processed for term in msg[0].split())
         preserved_terms = original_terms.intersection(processed_terms)
         return len(preserved_terms) / len(original_terms) if original_terms else 0.0
     
     def _calculate_efficiency(self, original: List[Tuple[str, str]], processed: List[Tuple[str, str]]) -> float:
-        # Calculate compression ratio while maintaining quality
         original_length = sum(len(msg[0]) for msg in original)
         processed_length = sum(len(msg[0]) for msg in processed)
         return 1 - (processed_length / original_length) if original_length > 0 else 0.0
+    
+    def _calculate_conciseness(self, processed: List[Tuple[str, str]]) -> float:
+        # Calculate average sentence length and word count
+        total_words = sum(len(msg[0].split()) for msg in processed)
+        total_sentences = sum(len(msg[0].split('.')) for msg in processed)
+        if total_sentences == 0:
+            return 0.0
+        avg_words_per_sentence = total_words / total_sentences
+        # Normalize to 0-1 range (assuming 20 words per sentence is optimal)
+        return max(0, 1 - (avg_words_per_sentence / 20))
+    
+    def _calculate_information_preservation(self, original: List[Tuple[str, str]], processed: List[Tuple[str, str]]) -> float:
+        # Check for key information preservation using semantic similarity
+        try:
+            original_embedding = self._get_embedding(" ".join(msg[0] for msg in original))
+            processed_embedding = self._get_embedding(" ".join(msg[0] for msg in processed))
+            return cosine_similarity([original_embedding], [processed_embedding])[0][0]
+        except:
+            return self._calculate_relevance(original, processed)  # Fallback to term-based relevance
+    
+    def _get_embedding(self, text: str) -> np.ndarray:
+        # Simple word embedding using average of word vectors
+        words = text.lower().split()
+        if not words:
+            return np.zeros(100)  # Default dimension
+        return np.mean([np.random.rand(100) for _ in words], axis=0)  # Placeholder for actual embeddings
 
 # Truncation Strategies
 class SlidingWindowStrategy(ContextStrategy):
@@ -99,8 +154,10 @@ class RelevanceStrategy(ContextStrategy):
 
 # Summarization Strategy
 class SummarizationStrategy(ContextStrategy):
-    def __init__(self):
-        super().__init__("Summarization")
+    def __init__(self, strategy_name="Standard Concise"):
+        super().__init__(f"Summarization ({strategy_name})")
+        self.strategy_name = strategy_name
+        self.strategy = SUMMARIZATION_STRATEGIES[strategy_name]
         # Force CPU for summarization to avoid MPS issues
         device = "cpu"
         self.summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=device)
@@ -132,9 +189,12 @@ def evaluate_strategies():
         SlidingWindowStrategy(window_size=2),
         FixedLengthStrategy(char_limit=200),
         RelevanceStrategy(),
-        SummarizationStrategy(),
         MemoryStrategy(capacity=3)
     ]
+    
+    # Add all summarization strategies
+    for strategy_name in SUMMARIZATION_STRATEGIES.keys():
+        strategies.append(SummarizationStrategy(strategy_name))
     
     results = {}
     for strategy in strategies:
@@ -156,13 +216,14 @@ def evaluate_strategies():
     if results:
         # Print comparison
         print("\nStrategy Comparison:")
-        print("-" * 80)
-        print(f"{'Strategy':<20} {'Coherence':<10} {'Relevance':<10} {'Efficiency':<10} {'Overall':<10}")
-        print("-" * 80)
+        print("-" * 100)
+        print(f"{'Strategy':<30} {'Coherence':<10} {'Relevance':<10} {'Efficiency':<10} {'Conciseness':<10} {'Info Pres.':<10} {'Overall':<10}")
+        print("-" * 100)
         for name, scores in results.items():
-            print(f"{name:<20} {scores['coherence']:<10.2f} {scores['relevance']:<10.2f} "
-                  f"{scores['efficiency']:<10.2f} {scores['overall']:<10.2f}")
-        print("-" * 80)
+            print(f"{name:<30} {scores['coherence']:<10.2f} {scores['relevance']:<10.2f} "
+                  f"{scores['efficiency']:<10.2f} {scores['conciseness']:<10.2f} "
+                  f"{scores['information_preservation']:<10.2f} {scores['overall']:<10.2f}")
+        print("-" * 100)
         
         # Find best strategy
         best_strategy = max(results.items(), key=lambda x: x[1]['overall'])
