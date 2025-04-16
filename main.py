@@ -1,4 +1,5 @@
 from github_evaluator import get_popularity_score, get_documentation_score
+from api_evaluator import test_oauth_implementation
 import json
 import requests
 from datetime import datetime, timedelta
@@ -51,7 +52,8 @@ for server in servers[:5]:
     #print(f"Popularity score for {owner}/{repo}: {repo_score}")
     doc_score = get_documentation_score(owner, repo)
     #print(f"doc score for {owner}/{repo}: {doc_score}")
-    url = f"https://api.github.com/repos/{owner}/{repo}/readme"
+    url = f"https://api.github.com/repos/{owner}/{repo}"
+    print(test_oauth_implementation(url))
     #print(f"Repo URL: {url}")
 
 

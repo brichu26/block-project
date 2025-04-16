@@ -4,6 +4,7 @@ import requests
 from typing import List, Dict, Any, Optional
 from urllib.parse import urljoin
 import random
+import base64
 
 #working on extracting api endpoints from documentation files to check if they are using JSON-RPC 2.0
 def extract_endpoints_from_docs(self, directory: str):
