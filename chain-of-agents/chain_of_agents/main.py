@@ -13,8 +13,8 @@ class ChainOfAgents:
     def __init__(
         self,
         worker_model: str = "gpt-4o",
-        manager_model: str = "gpt-4-turbo-preview",
-        chunk_size: int = 4000,  # Adjusted for token count rather than words
+        manager_model: str = "gpt-4o",
+        chunk_size: int = 8000,  # Adjusted for token count rather than words
         task_type: str = "qa",
         worker_prompt: Optional[str] = None,
         manager_prompt: Optional[str] = None

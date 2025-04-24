@@ -3,26 +3,40 @@
 # Exit on error
 set -e
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
+# Find project root (parent of this script's directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+VENV_PATH="$PROJECT_ROOT/.venv"
+REQUIREMENTS_PATH="$PROJECT_ROOT/requirements.txt"
+
+# Check if parent .venv exists, if not, create with python3.11
+if [ ! -d "$VENV_PATH" ]; then
+    echo "Creating Python 3.11 virtual environment at $VENV_PATH..."
+    python3.11 -m venv "$VENV_PATH"
 fi
 
-# Activate virtual environment
-source venv/bin/activate
+# Activate parent virtual environment
+source "$VENV_PATH/bin/activate"
 
-# Install requirements
-echo "Installing requirements..."
-pip install -r requirements.txt
-
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo "Creating .env file..."
-    echo "OPENAI_API_KEY=" > .env
-    echo "Please add your OpenAI API key to the .env file"
+# Install requirements from parent folder
+if [ -f "$REQUIREMENTS_PATH" ]; then
+    echo "Installing requirements from $REQUIREMENTS_PATH..."
+    pip install -r "$REQUIREMENTS_PATH"
+else
+    echo "Requirements file not found at $REQUIREMENTS_PATH"
     exit 1
 fi
+
+# Check if .env file exists in parent project root
+if [ ! -f "$PROJECT_ROOT/.env" ]; then
+    echo "No .env file found in $PROJECT_ROOT. Please create one with your OpenAI API key."
+    exit 1
+fi
+
+# Export environment variables from parent .env
+set -o allexport
+source "$PROJECT_ROOT/.env"
+set +o allexport
 
 # Run example
 echo "Running Chain of Agents example..."
@@ -45,8 +59,8 @@ if not os.getenv("OPENAI_API_KEY"):
 
 # Initialize Chain of Agents
 coa = ChainOfAgents(
-    worker_model="gpt-4o",
-    manager_model="gpt-4-turbo-preview",
+    worker_model="gpt-4o-mini",
+    manager_model="gpt-4o",
     chunk_size=8000,  # Increased chunk size for OpenAI models
     task_type="summarization"
 )
