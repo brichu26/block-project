@@ -1,6 +1,6 @@
 from typing import Optional, Iterator, Dict
 from .agents import WorkerAgent, ManagerAgent
-from .utils import split_into_chunks, get_task_prompts
+from .utils import chunk_text_algorithm2, get_task_prompts
 import logging
 import json
 
@@ -12,7 +12,7 @@ class ChainOfAgents:
     
     def __init__(
         self,
-        worker_model: str = "gpt-4o",
+        worker_model: str = "gpt-4o-mini",
         manager_model: str = "gpt-4o",
         chunk_size: int = 8000,  # Adjusted for token count rather than words
         task_type: str = "qa",
@@ -52,8 +52,13 @@ class ChainOfAgents:
         Returns:
             str: The final response from the manager agent
         """
-        # Split text into chunks
-        chunks = split_into_chunks(input_text, self.chunk_size)
+        # Split text into chunks using Algorithm 2
+        chunks = chunk_text_algorithm2(
+            source_text=input_text,
+            query=query,
+            instruction=self.worker_prompt,
+            window_size=self.chunk_size
+        )
         
         # Process chunks with worker agents in sequence
         previous_cu = None
@@ -75,7 +80,12 @@ class ChainOfAgents:
     
     def process_stream(self, input_text: str, query: str) -> Iterator[Dict[str, str]]:
         """Process text with streaming - yields worker and manager messages."""
-        chunks = split_into_chunks(input_text, self.chunk_size)
+        chunks = chunk_text_algorithm2(
+            source_text=input_text,
+            query=query,
+            instruction=self.worker_prompt,
+            window_size=self.chunk_size
+        )
         total_chunks = len(chunks)
         
         # Debug logging for metadata

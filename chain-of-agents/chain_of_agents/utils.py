@@ -2,9 +2,71 @@ from typing import List, Tuple
 import logging
 import fitz  # PyMuPDF
 import re
+import nltk
+import tiktoken
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def chunk_text_algorithm2(
+    source_text: str,
+    query: str,
+    instruction: str,
+    window_size: int,
+    tokenizer=None,
+    buffer_tokens: int = 100
+) -> List[str]:
+    """
+    Chunk text according to Algorithm 2 from the Chain-of-Agents paper appendix.
+    Args:
+        source_text: The input document text
+        query: The user query
+        instruction: The worker instruction string
+        window_size: The agent's window size (max tokens)
+        tokenizer: A tiktoken encoding instance (if None, will use cl100k_base)
+        buffer_tokens: Optional safety buffer for prompt overhead
+    Returns:
+        List[str]: List of text chunks
+    """
+    if tokenizer is None:
+        try:
+            tokenizer = tiktoken.encoding_for_model("gpt-4o")
+        except Exception:
+            tokenizer = tiktoken.get_encoding("cl100k_base")
+    
+    # Calculate budget
+    query_tokens = len(tokenizer.encode(query))
+    instruction_tokens = len(tokenizer.encode(instruction))
+    budget = window_size - query_tokens - instruction_tokens - buffer_tokens
+    if budget <= 0:
+        raise ValueError("Window size too small for query and instruction.")
+    
+    # Sentence splitting
+    sentences = nltk.sent_tokenize(source_text)
+    chunks = []
+    current_chunk = ""
+    current_tokens = 0
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        sentence_tokens = len(tokenizer.encode(sentence))
+        # If adding this sentence would exceed the budget, start a new chunk
+        if current_tokens + sentence_tokens > budget and current_chunk:
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence
+            current_tokens = sentence_tokens
+        else:
+            if current_chunk:
+                current_chunk += " " + sentence
+                current_tokens += sentence_tokens
+            else:
+                current_chunk = sentence
+                current_tokens = sentence_tokens
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    logger.info(f"[Algorithm2] Chunked text into {len(chunks)} chunks (budget={budget})")
+    return chunks
 
 def read_pdf(pdf_path: str) -> str:
     """

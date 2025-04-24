@@ -6,10 +6,14 @@ import tiktoken
 import nltk
 from pypdf import PdfReader # To read the PDF text directly if needed
 from dotenv import load_dotenv
+import logging
 # Langchain/LangGraph imports
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END, START
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()# --- 0. Helper Functions & Setup ---
 
@@ -42,58 +46,66 @@ def count_tokens(text: str) -> int:
     """Counts tokens using the initialized tokenizer."""
     return len(tokenizer.encode(text))
 
-# --- 1. Chunking Function (Based on Paper's Algorithm 2) ---
-def chunk_text(source_text: str, query: str, instruction: str, window_size: int) -> List[str]:
-    """Chunks the source text based on Algorithm 2."""
-    sentences = split_into_sentences(source_text)
-
+def chunk_text_algorithm2(
+    source_text: str,
+    query: str,
+    instruction: str,
+    window_size: int,
+    tokenizer=None,
+    buffer_tokens: int = 100
+) -> List[str]:
+    """
+    Chunk text according to Algorithm 2 from the Chain-of-Agents paper appendix.
+    Args:
+        source_text: The input document text
+        query: The user query
+        instruction: The worker instruction string
+        window_size: The agent's window size (max tokens)
+        tokenizer: A tiktoken encoding instance (if None, will use cl100k_base)
+        buffer_tokens: Optional safety buffer for prompt overhead
+    Returns:
+        List[str]: List of text chunks
+    """
+    if tokenizer is None:
+        try:
+            tokenizer = tiktoken.encoding_for_model("gpt-4o")
+        except Exception:
+            tokenizer = tiktoken.get_encoding("cl100k_base")
+    
     # Calculate budget
-    query_tokens = count_tokens(query)
-    instruction_tokens = count_tokens(instruction)
-    # Add a buffer for safety margin with tokenization differences and prompts
-    budget = window_size - query_tokens - instruction_tokens - 100
-
+    query_tokens = len(tokenizer.encode(query))
+    instruction_tokens = len(tokenizer.encode(instruction))
+    budget = window_size - query_tokens - instruction_tokens - buffer_tokens
     if budget <= 0:
         raise ValueError("Window size too small for query and instruction.")
-
+    
+    # Sentence splitting
+    sentences = nltk.sent_tokenize(source_text)
     chunks = []
     current_chunk = ""
-    current_chunk_tokens = 0
-
+    current_tokens = 0
     for sentence in sentences:
-        sentence_tokens = count_tokens(sentence)
-        tokens_with_space = sentence_tokens + (1 if current_chunk else 0) # Approx token for space
-
-        # Check if adding the sentence exceeds budget OR if sentence itself is too long
-        if sentence_tokens > budget:
-             print(f"Warning: Skipping sentence longer than budget: '{sentence[:100]}...'")
-             continue # Skip sentence that's too long on its own
-
-        if current_chunk_tokens + tokens_with_space > budget:
-            if current_chunk:
-                chunks.append(current_chunk.strip())
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        sentence_tokens = len(tokenizer.encode(sentence))
+        # If adding this sentence would exceed the budget, start a new chunk
+        if current_tokens + sentence_tokens > budget and current_chunk:
+            chunks.append(current_chunk.strip())
             current_chunk = sentence
-            current_chunk_tokens = sentence_tokens
+            current_tokens = sentence_tokens
         else:
-            # Add sentence to current chunk
             if current_chunk:
                 current_chunk += " " + sentence
-                current_chunk_tokens += tokens_with_space
+                current_tokens += sentence_tokens
             else:
                 current_chunk = sentence
-                current_chunk_tokens = sentence_tokens
-
-
-    # Add the last chunk if it's not empty
+                current_tokens = sentence_tokens
     if current_chunk:
         chunks.append(current_chunk.strip())
-
-    print(f"Chunked text into {len(chunks)} chunks.")
-    # Optional: Print token count per chunk for verification
-    # for i, chunk in enumerate(chunks):
-    #    print(f"Chunk {i+1} tokens: {count_tokens(chunk)}")
+    logger.info(f"[Algorithm2] Chunked text into {len(chunks)} chunks (budget={budget})")
     return chunks
-
+    
 # --- 2. Define Agent State ---
 class HierarchicalAgentState(TypedDict):
     query: str
@@ -242,7 +254,13 @@ window_size = 8000
 
 # Initial chunking
 try:
-    chunks = chunk_text(source_text, query, worker_instruction, window_size)
+    chunks = chunk_text_algorithm2(
+        source_text=source_text,
+        query=query,
+        instruction=worker_instruction,
+        window_size=window_size,
+        tokenizer=tokenizer
+    )
 except ValueError as e:
     print(f"Error during chunking: {e}")
     exit()
