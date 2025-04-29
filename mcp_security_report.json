@@ -1,0 +1,989 @@
+[
+  {
+    "owner": "021-factory",
+    "repo": "laravel-debugbar-mcp",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": false,
+    "outbound_connections": [],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 0.9,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 118,
+      "sections_found": [],
+      "missing_sections": [
+        "installation",
+        "usage",
+        "configuration",
+        "api_reference",
+        "error_handling",
+        "license",
+        "project_info"
+      ],
+      "has_code_examples": false,
+      "has_screenshots": false,
+      "has_security_info": false,
+      "has_error_handling": false,
+      "has_cli_docs": false,
+      "has_license_info": false,
+      "has_project_info": false,
+      "has_tools_reference": false,
+      "has_requirements": false,
+      "has_testing_info": false,
+      "has_advanced_usage": false,
+      "keyword_matches": {},
+      "readability_score": 3.5,
+      "headings_count": 1,
+      "code_blocks_count": 0,
+      "documentation_completeness": 0.0
+    },
+    "github_stars": 1,
+    "download_count": 0,
+    "forks": 0,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "Laravel DebugBar MCP Server provides a bridge between AI assistants and the Laravel DebugBar debugging tool, enabling access to detailed request logs and diagnostic information from Laravel applications. The server exposes tools for retrieving request logs with filtering capabilities and accessing specific debug data like queries, routes, views, and models through a standardized interface. Built with TypeScript and the MCP protocol, it features data formatting to simplify verbose debug output, retry logic for API requests, and relative time calculations for improved readability. This implementation is particularly valuable for developers who need to analyze Laravel application performance and behavior directly through conversational AI.",
+    "adjusted_risk_score": 0.973,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -0.27
+  },
+  {
+    "owner": "0xbeedao",
+    "repo": "mcp-taskwarrior",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": false,
+    "outbound_connections": [],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 3.6,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 768,
+      "sections_found": [
+        "installation",
+        "usage",
+        "security",
+        "cli",
+        "code_examples",
+        "contribution",
+        "tools_reference"
+      ],
+      "missing_sections": [
+        "configuration",
+        "api_reference",
+        "error_handling",
+        "license",
+        "project_info"
+      ],
+      "has_code_examples": true,
+      "has_screenshots": false,
+      "has_security_info": true,
+      "has_error_handling": false,
+      "has_cli_docs": true,
+      "has_license_info": false,
+      "has_project_info": false,
+      "has_tools_reference": true,
+      "has_requirements": false,
+      "has_testing_info": false,
+      "has_advanced_usage": false,
+      "keyword_matches": {
+        "installation": {
+          "count": 4,
+          "strength": 4
+        },
+        "usage": {
+          "count": 3,
+          "strength": 3
+        },
+        "security": {
+          "count": 1,
+          "strength": 1
+        },
+        "cli": {
+          "count": 5,
+          "strength": 5
+        },
+        "code_examples": {
+          "count": 2,
+          "strength": 2
+        },
+        "contribution": {
+          "count": 4,
+          "strength": 4
+        },
+        "tools_reference": {
+          "count": 1,
+          "strength": 1
+        }
+      },
+      "readability_score": 3.5,
+      "headings_count": 5,
+      "code_blocks_count": 2,
+      "documentation_completeness": 4.4
+    },
+    "github_stars": 0,
+    "download_count": 1194,
+    "forks": 1,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.2,
+    "description": "mcp-taskwarrior is a server implementation by Bruce Kroeze that facilitates task management through Taskwarrior. It provides four essential tools for managing tasks: adding, updating, deleting, and listing tasks, with support for organizing by project and priority levels. Built with TypeScript and using the fastmcp and taskwarrior-lib dependencies, it can be used either through npx or by local installation, making it ideal for users who want to integrate task management capabilities into their AI assistant workflows.",
+    "adjusted_risk_score": 1.0919999999999999,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -1.08
+  },
+  {
+    "owner": "0xbruno",
+    "repo": "mcpexec",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": false,
+    "outbound_connections": [],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 3.8,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 841,
+      "sections_found": [
+        "installation",
+        "usage",
+        "cli",
+        "code_examples",
+        "contribution",
+        "tools_reference",
+        "requirements"
+      ],
+      "missing_sections": [
+        "configuration",
+        "api_reference",
+        "error_handling",
+        "license",
+        "project_info"
+      ],
+      "has_code_examples": true,
+      "has_screenshots": false,
+      "has_security_info": false,
+      "has_error_handling": false,
+      "has_cli_docs": true,
+      "has_license_info": false,
+      "has_project_info": false,
+      "has_tools_reference": true,
+      "has_requirements": true,
+      "has_testing_info": false,
+      "has_advanced_usage": false,
+      "keyword_matches": {
+        "installation": {
+          "count": 7,
+          "strength": 7
+        },
+        "usage": {
+          "count": 1,
+          "strength": 1
+        },
+        "cli": {
+          "count": 5,
+          "strength": 5
+        },
+        "code_examples": {
+          "count": 1,
+          "strength": 1
+        },
+        "contribution": {
+          "count": 3,
+          "strength": 3
+        },
+        "tools_reference": {
+          "count": 1,
+          "strength": 1
+        },
+        "requirements": {
+          "count": 1,
+          "strength": 1
+        }
+      },
+      "readability_score": 5.0,
+      "headings_count": 5,
+      "code_blocks_count": 1,
+      "documentation_completeness": 4.4
+    },
+    "github_stars": 0,
+    "download_count": 0,
+    "forks": 1,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "This MCP server implementation provides a tool for executing local CLI commands asynchronously. Developed by 0xBruno, it uses FastMCP and asyncio to run shell commands securely, handling command arguments with spaces and quotes properly. The server is designed for use cases requiring remote execution of system commands, with built-in error handling for failed commands.",
+    "adjusted_risk_score": 0.886,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -1.1400000000000001
+  },
+  {
+    "owner": "0xdwong",
+    "repo": "sui-mcp",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": false,
+    "outbound_connections": [],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 5.6,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 2144,
+      "sections_found": [
+        "installation",
+        "configuration",
+        "api_reference",
+        "cli",
+        "screenshots",
+        "code_examples",
+        "contribution",
+        "project_info",
+        "tools_reference",
+        "requirements",
+        "testing"
+      ],
+      "missing_sections": [
+        "usage",
+        "error_handling",
+        "license"
+      ],
+      "has_code_examples": true,
+      "has_screenshots": true,
+      "has_security_info": false,
+      "has_error_handling": false,
+      "has_cli_docs": true,
+      "has_license_info": false,
+      "has_project_info": true,
+      "has_tools_reference": true,
+      "has_requirements": true,
+      "has_testing_info": true,
+      "has_advanced_usage": false,
+      "keyword_matches": {
+        "installation": {
+          "count": 5,
+          "strength": 5
+        },
+        "configuration": {
+          "count": 13,
+          "strength": 6
+        },
+        "api_reference": {
+          "count": 3,
+          "strength": 3
+        },
+        "cli": {
+          "count": 4,
+          "strength": 4
+        },
+        "screenshots": {
+          "count": 25,
+          "strength": 7
+        },
+        "code_examples": {
+          "count": 4,
+          "strength": 4
+        },
+        "contribution": {
+          "count": 9,
+          "strength": 6
+        },
+        "project_info": {
+          "count": 2,
+          "strength": 2
+        },
+        "tools_reference": {
+          "count": 9,
+          "strength": 7
+        },
+        "requirements": {
+          "count": 2,
+          "strength": 2
+        },
+        "testing": {
+          "count": 3,
+          "strength": 3
+        }
+      },
+      "readability_score": 5.0,
+      "headings_count": 8,
+      "code_blocks_count": 4,
+      "documentation_completeness": 6.9
+    },
+    "github_stars": 1,
+    "download_count": 0,
+    "forks": 2,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "Sui MCP server enables AI assistants to interact with the Sui blockchain network through a standardized interface. Built with TypeScript, it provides tools for requesting test tokens from the Sui devnet faucet and integrates with the official Sui SDK. This implementation is particularly valuable for blockchain developers and users who need to test Sui smart contracts or manage wallets through conversational AI.",
+    "adjusted_risk_score": 0.8320000000000001,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -1.6799999999999997
+  },
+  {
+    "owner": "0xgval",
+    "repo": "evm-mcp-tools",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": true,
+    "outbound_connections": [
+      "https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${address",
+      "https://eth.llamarpc.com",
+      "https://api.etherscan.io/api?module=contract&action=getcontractcreation&contractaddresses=${address",
+      "https://api.etherscan.io/api?module=block&action=getblockreward&blockno=${blockNumber",
+      "https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash"
+    ],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 7.2,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 4899,
+      "sections_found": [
+        "installation",
+        "usage",
+        "configuration",
+        "api_reference",
+        "security",
+        "error_handling",
+        "cli",
+        "screenshots",
+        "code_examples",
+        "contribution",
+        "license",
+        "project_info",
+        "tools_reference",
+        "requirements",
+        "advanced_usage"
+      ],
+      "missing_sections": [],
+      "has_code_examples": true,
+      "has_screenshots": true,
+      "has_security_info": true,
+      "has_error_handling": true,
+      "has_cli_docs": true,
+      "has_license_info": true,
+      "has_project_info": true,
+      "has_tools_reference": true,
+      "has_requirements": true,
+      "has_testing_info": false,
+      "has_advanced_usage": true,
+      "keyword_matches": {
+        "installation": {
+          "count": 7,
+          "strength": 7
+        },
+        "usage": {
+          "count": 3,
+          "strength": 3
+        },
+        "configuration": {
+          "count": 6,
+          "strength": 6
+        },
+        "api_reference": {
+          "count": 34,
+          "strength": 9
+        },
+        "security": {
+          "count": 24,
+          "strength": 10
+        },
+        "error_handling": {
+          "count": 4,
+          "strength": 4
+        },
+        "cli": {
+          "count": 1,
+          "strength": 1
+        },
+        "screenshots": {
+          "count": 3,
+          "strength": 3
+        },
+        "code_examples": {
+          "count": 3,
+          "strength": 3
+        },
+        "contribution": {
+          "count": 28,
+          "strength": 9
+        },
+        "license": {
+          "count": 5,
+          "strength": 5
+        },
+        "project_info": {
+          "count": 2,
+          "strength": 2
+        },
+        "tools_reference": {
+          "count": 12,
+          "strength": 8
+        },
+        "requirements": {
+          "count": 2,
+          "strength": 2
+        },
+        "advanced_usage": {
+          "count": 2,
+          "strength": 2
+        }
+      },
+      "readability_score": 3.5,
+      "headings_count": 16,
+      "code_blocks_count": 3,
+      "documentation_completeness": 9.4
+    },
+    "github_stars": 5,
+    "download_count": 0,
+    "forks": 3,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "EVM MCP Tools provides Ethereum blockchain analysis capabilities directly within Claude AI conversations. It offers a suite of tools for smart contract auditing, wallet analysis, token balance checking, and profitability tracking across Ethereum and compatible chains. The implementation leverages Web3.js, Moralis, and Etherscan APIs to fetch on-chain data, analyze contract security, detect token standards, and calculate wallet profit/loss metrics. Designed for integration with Claude for Desktop, it enables users to perform blockchain analysis tasks without leaving their conversation context, making it particularly valuable for developers, traders, and researchers who need quick access to Ethereum data.",
+    "adjusted_risk_score": 0.716,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -2.16
+  },
+  {
+    "owner": "0xgval",
+    "repo": "twitter-x-mcp-server",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": true,
+    "outbound_connections": [],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 7.7,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 5706,
+      "sections_found": [
+        "installation",
+        "usage",
+        "configuration",
+        "api_reference",
+        "security",
+        "error_handling",
+        "cli",
+        "screenshots",
+        "code_examples",
+        "contribution",
+        "license",
+        "project_info",
+        "tools_reference",
+        "requirements",
+        "testing",
+        "advanced_usage"
+      ],
+      "missing_sections": [],
+      "has_code_examples": true,
+      "has_screenshots": true,
+      "has_security_info": true,
+      "has_error_handling": true,
+      "has_cli_docs": true,
+      "has_license_info": true,
+      "has_project_info": true,
+      "has_tools_reference": true,
+      "has_requirements": true,
+      "has_testing_info": true,
+      "has_advanced_usage": true,
+      "keyword_matches": {
+        "installation": {
+          "count": 10,
+          "strength": 10
+        },
+        "usage": {
+          "count": 7,
+          "strength": 7
+        },
+        "configuration": {
+          "count": 3,
+          "strength": 3
+        },
+        "api_reference": {
+          "count": 33,
+          "strength": 9
+        },
+        "security": {
+          "count": 6,
+          "strength": 5
+        },
+        "error_handling": {
+          "count": 2,
+          "strength": 2
+        },
+        "cli": {
+          "count": 4,
+          "strength": 4
+        },
+        "screenshots": {
+          "count": 10,
+          "strength": 9
+        },
+        "code_examples": {
+          "count": 11,
+          "strength": 5
+        },
+        "contribution": {
+          "count": 16,
+          "strength": 8
+        },
+        "license": {
+          "count": 6,
+          "strength": 6
+        },
+        "project_info": {
+          "count": 4,
+          "strength": 4
+        },
+        "tools_reference": {
+          "count": 13,
+          "strength": 6
+        },
+        "requirements": {
+          "count": 4,
+          "strength": 4
+        },
+        "testing": {
+          "count": 5,
+          "strength": 5
+        },
+        "advanced_usage": {
+          "count": 4,
+          "strength": 4
+        }
+      },
+      "readability_score": 5.0,
+      "headings_count": 24,
+      "code_blocks_count": 11,
+      "documentation_completeness": 10.0
+    },
+    "github_stars": 1,
+    "download_count": 0,
+    "forks": 0,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "X Tools for Claude MCP is a lightweight toolkit that enables Claude AI to search Twitter with natural language queries and display results based on user intent. Built with Node.js and the Model Context Protocol SDK, it leverages the RapidAPI Twitter154 endpoint to provide advanced search capabilities including filtering by keywords, users, dates, and engagement metrics. The implementation formats tweets with clean markdown, supports pagination for larger result sets, and intelligently adapts its response style based on whether users want raw data viewing or analytical insights, making it particularly valuable for researchers, marketers, and social media analysts who need to quickly access and understand Twitter content.",
+    "adjusted_risk_score": 0.731,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -2.31
+  },
+  {
+    "owner": "0xhijo",
+    "repo": "mcp_twitter",
+    "suspicious_files": [],
+    "oauth_implementation": true,
+    "direct_api_tokens": false,
+    "outbound_connections": [],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 6.9,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 3771,
+      "sections_found": [
+        "installation",
+        "usage",
+        "configuration",
+        "api_reference",
+        "security",
+        "error_handling",
+        "cli",
+        "screenshots",
+        "code_examples",
+        "contribution",
+        "license",
+        "project_info",
+        "tools_reference",
+        "requirements"
+      ],
+      "missing_sections": [],
+      "has_code_examples": true,
+      "has_screenshots": true,
+      "has_security_info": true,
+      "has_error_handling": true,
+      "has_cli_docs": true,
+      "has_license_info": true,
+      "has_project_info": true,
+      "has_tools_reference": true,
+      "has_requirements": true,
+      "has_testing_info": false,
+      "has_advanced_usage": false,
+      "keyword_matches": {
+        "installation": {
+          "count": 5,
+          "strength": 5
+        },
+        "usage": {
+          "count": 3,
+          "strength": 3
+        },
+        "configuration": {
+          "count": 17,
+          "strength": 10
+        },
+        "api_reference": {
+          "count": 13,
+          "strength": 7
+        },
+        "security": {
+          "count": 24,
+          "strength": 10
+        },
+        "error_handling": {
+          "count": 1,
+          "strength": 1
+        },
+        "cli": {
+          "count": 6,
+          "strength": 6
+        },
+        "screenshots": {
+          "count": 9,
+          "strength": 9
+        },
+        "code_examples": {
+          "count": 5,
+          "strength": 5
+        },
+        "contribution": {
+          "count": 8,
+          "strength": 5
+        },
+        "license": {
+          "count": 1,
+          "strength": 1
+        },
+        "project_info": {
+          "count": 3,
+          "strength": 3
+        },
+        "tools_reference": {
+          "count": 6,
+          "strength": 6
+        },
+        "requirements": {
+          "count": 1,
+          "strength": 1
+        }
+      },
+      "readability_score": 3.5,
+      "headings_count": 18,
+      "code_blocks_count": 5,
+      "documentation_completeness": 8.8
+    },
+    "github_stars": 6,
+    "download_count": 513,
+    "forks": 2,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "MCP Twitter provides direct interaction with Twitter/X through a standardized set of tools, enabling AI models to perform actions like creating posts, replying to tweets, following users, and retrieving profile data. Built by 0xhijo, it supports two authentication methods (API credentials or direct Twitter login) and exposes 11 distinct Twitter functionalities through a Node.js server. The implementation is designed for seamless integration with Claude through the claude_mcp_config.json file, making it particularly valuable for automated social media management, content creation, and Twitter data analysis without leaving the conversation interface.",
+    "adjusted_risk_score": 0.2929999999999999,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -2.0700000000000003
+  },
+  {
+    "owner": "0xkoda",
+    "repo": "eth-mcp",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": false,
+    "outbound_connections": [
+      "https://eth.llamarpc.com"
+    ],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 6.6,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 3372,
+      "sections_found": [
+        "usage",
+        "configuration",
+        "api_reference",
+        "error_handling",
+        "cli",
+        "screenshots",
+        "code_examples",
+        "contribution",
+        "license",
+        "project_info",
+        "tools_reference",
+        "testing",
+        "advanced_usage"
+      ],
+      "missing_sections": [
+        "installation"
+      ],
+      "has_code_examples": true,
+      "has_screenshots": true,
+      "has_security_info": false,
+      "has_error_handling": true,
+      "has_cli_docs": true,
+      "has_license_info": true,
+      "has_project_info": true,
+      "has_tools_reference": true,
+      "has_requirements": false,
+      "has_testing_info": true,
+      "has_advanced_usage": true,
+      "keyword_matches": {
+        "usage": {
+          "count": 2,
+          "strength": 2
+        },
+        "configuration": {
+          "count": 2,
+          "strength": 2
+        },
+        "api_reference": {
+          "count": 12,
+          "strength": 10
+        },
+        "error_handling": {
+          "count": 1,
+          "strength": 1
+        },
+        "cli": {
+          "count": 10,
+          "strength": 8
+        },
+        "screenshots": {
+          "count": 4,
+          "strength": 4
+        },
+        "code_examples": {
+          "count": 3,
+          "strength": 3
+        },
+        "contribution": {
+          "count": 19,
+          "strength": 10
+        },
+        "license": {
+          "count": 4,
+          "strength": 4
+        },
+        "project_info": {
+          "count": 6,
+          "strength": 6
+        },
+        "tools_reference": {
+          "count": 16,
+          "strength": 9
+        },
+        "testing": {
+          "count": 8,
+          "strength": 5
+        },
+        "advanced_usage": {
+          "count": 1,
+          "strength": 1
+        }
+      },
+      "readability_score": 5.0,
+      "headings_count": 13,
+      "code_blocks_count": 3,
+      "documentation_completeness": 8.1
+    },
+    "github_stars": 5,
+    "download_count": 0,
+    "forks": 4,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "This Ethereum RPC MCP server provides a bridge to interact with the Ethereum blockchain through standard JSON-RPC calls. Developed by Koda, it exposes three essential tools: eth_getCode for retrieving contract bytecode, eth_gasPrice for checking current gas prices, and eth_getBalance for querying account balances. The implementation uses axios for making HTTP requests to a public Ethereum RPC endpoint (llamarpc) and includes error handling with human-readable responses. Ideal for AI assistants that need to perform basic Ethereum blockchain queries without requiring complex wallet integration.",
+    "adjusted_risk_score": 0.802,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -1.9799999999999998
+  },
+  {
+    "owner": "0xkoda",
+    "repo": "mcp-rust-docs",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": false,
+    "outbound_connections": [
+      "https://docs.rs/${crateName"
+    ],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 7.1,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 2710,
+      "sections_found": [
+        "installation",
+        "usage",
+        "configuration",
+        "api_reference",
+        "error_handling",
+        "cli",
+        "screenshots",
+        "code_examples",
+        "contribution",
+        "license",
+        "project_info",
+        "tools_reference",
+        "requirements",
+        "testing"
+      ],
+      "missing_sections": [],
+      "has_code_examples": true,
+      "has_screenshots": true,
+      "has_security_info": false,
+      "has_error_handling": true,
+      "has_cli_docs": true,
+      "has_license_info": true,
+      "has_project_info": true,
+      "has_tools_reference": true,
+      "has_requirements": true,
+      "has_testing_info": true,
+      "has_advanced_usage": false,
+      "keyword_matches": {
+        "installation": {
+          "count": 6,
+          "strength": 6
+        },
+        "usage": {
+          "count": 4,
+          "strength": 4
+        },
+        "configuration": {
+          "count": 3,
+          "strength": 3
+        },
+        "api_reference": {
+          "count": 9,
+          "strength": 9
+        },
+        "error_handling": {
+          "count": 1,
+          "strength": 1
+        },
+        "cli": {
+          "count": 6,
+          "strength": 6
+        },
+        "screenshots": {
+          "count": 4,
+          "strength": 4
+        },
+        "code_examples": {
+          "count": 5,
+          "strength": 5
+        },
+        "contribution": {
+          "count": 15,
+          "strength": 8
+        },
+        "license": {
+          "count": 4,
+          "strength": 4
+        },
+        "project_info": {
+          "count": 2,
+          "strength": 2
+        },
+        "tools_reference": {
+          "count": 6,
+          "strength": 6
+        },
+        "requirements": {
+          "count": 2,
+          "strength": 2
+        },
+        "testing": {
+          "count": 3,
+          "strength": 3
+        }
+      },
+      "readability_score": 5.0,
+      "headings_count": 16,
+      "code_blocks_count": 4,
+      "documentation_completeness": 8.8
+    },
+    "github_stars": 30,
+    "download_count": 0,
+    "forks": 4,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "This MCP server fetches and returns documentation for Rust crates from docs.rs, providing essential context for LLMs working with Rust code. It implements a single tool, 'lookup_crate_docs', which retrieves HTML documentation, converts it to plain text, and truncates it if necessary. The server is designed for easy integration with AI assistants like Claude Desktop and can be tested using the MCP Inspector.",
+    "adjusted_risk_score": 0.787,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -2.13
+  },
+  {
+    "owner": "0xrag",
+    "repo": "mcp",
+    "suspicious_files": [],
+    "oauth_implementation": false,
+    "direct_api_tokens": false,
+    "outbound_connections": [],
+    "risk_score": 0,
+    "risk_factors": [],
+    "doc_quality_score": 0,
+    "doc_quality_details": {
+      "readme_found": true,
+      "readme_size_bytes": 6,
+      "sections_found": [],
+      "missing_sections": [],
+      "has_code_examples": false,
+      "has_screenshots": false,
+      "has_security_info": false,
+      "has_error_handling": false,
+      "has_cli_docs": false,
+      "has_license_info": false,
+      "has_project_info": false,
+      "has_tools_reference": false,
+      "has_requirements": false,
+      "has_testing_info": false,
+      "has_advanced_usage": false,
+      "keyword_matches": {},
+      "readability_score": 0,
+      "headings_count": 0,
+      "code_blocks_count": 0,
+      "documentation_completeness": 0
+    },
+    "github_stars": 0,
+    "download_count": 0,
+    "forks": 0,
+    "last_commit_days": null,
+    "star_score": 0,
+    "fork_score": 0,
+    "commit_score": 10,
+    "popularity_score": 1.0,
+    "description": "A lightweight MCP server built with TypeScript and Coinbase's AgentKit, designed to provide a flexible wallet interaction framework using Viem on the Base Sepolia testnet. The implementation sets up a standard MCP server with tool listing and execution capabilities, generating a random wallet client and exposing blockchain-related actions through a stdio transport mechanism.",
+    "adjusted_risk_score": 1.0,
+    "risk_category": "MINIMAL",
+    "doc_quality_adjustment": -0.0
+  }
+]
