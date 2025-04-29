@@ -3,6 +3,7 @@ from summarizers.topic_segment import segment_and_summarize
 from summarizers.graph_summarizer import graph_summarize
 from summarizers.memory_summarizer import memory_augmented_summary
 from evaluators.evaluate_llm import evaluate_summary_llm
+from utils.text_helpers import clean_sentence  
 from datetime import datetime
 
 MAX_INPUT_TOKENS = 1024
@@ -17,9 +18,16 @@ if __name__ == "__main__":
     output_lines.append("=" * 50)
 
     # Load conversation
-    text = load_conversation("data/sample_convo.txt")
-    output_lines.append(f"\nToken count: {count_tokens(text)}")
+    raw_text = load_conversation("data/sample_convo.txt")
+    output_lines.append(f"\nToken count (before cleaning): {count_tokens(raw_text)}")
 
+    # Clean hallucinated garbage, spam, etc.
+    text = clean_sentence(raw_text)
+
+    # Recount after cleaning
+    output_lines.append(f"Token count (after cleaning): {count_tokens(text)}")
+
+    # Global truncation if needed
     if count_tokens(text) > MAX_INPUT_TOKENS:
         output_lines.append(f"\nTruncating input to {MAX_INPUT_TOKENS} tokens...")
         text = truncate_text_safe(text, MAX_INPUT_TOKENS)
@@ -53,7 +61,7 @@ if __name__ == "__main__":
     output_lines.append(memory_summary)
     summaries["Memory-Augmented"] = memory_summary
 
-    # Evals
+    # Evaluations
     for label, summary_text in summaries.items():
         output_lines.append("\n" + "=" * 50)
         output_lines.append(f"\n=== {label} Evaluation ===")
@@ -64,8 +72,9 @@ if __name__ == "__main__":
                 output_lines.append(f"{metric.capitalize()}: {details['score']}/5 — {details['justification']}")
             output_lines.append("Overall Comment: " + evaluation.get('overall_comment', "No comment."))
         else:
-            output_lines.append(f"Evaluation failed: {evaluation}")
+            output_lines.append(f"Evaluation: {evaluation}")
 
+    # Save everything
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write("\n\n".join(output_lines))
 

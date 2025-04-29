@@ -2,6 +2,8 @@ import nltk
 from sentence_transformers import SentenceTransformer
 nltk.download('punkt')
 from keybert import KeyBERT
+import re
+
 
 kw_model = KeyBERT()
 
@@ -40,3 +42,15 @@ def extract_keywords(text, top_k=5):
     # Extract top-k keywords from the input text using KeyBERT.
     keywords = kw_model.extract_keywords(text, top_n=top_k)
     return [kw[0] for kw in keywords]
+
+
+def clean_sentence(s):
+    """
+    Removes hallucination-triggering patterns like emails, URLs, and social filler.
+    """
+    s = re.sub(r'\S+@\S+\.\S+', '', s)  # Remove emails
+    s = re.sub(r'https?://\S+', '', s)  # Remove URLs
+    s = re.sub(r'\b(click here|back to the page|see more|follow me on|read more|view more)\b', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b\d{4}-\d{2}-\d{2}\b', '', s)  # Remove date-like patterns
+    s = re.sub(r'[^\w\s.,!?]', '', s)  # Remove stray symbols
+    return s.strip()
