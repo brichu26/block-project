@@ -66,14 +66,14 @@ coa = ChainOfAgents(
 )
 
 # Read PDF file
-pdf_path = "coa.pdf"  # Updated to your PDF file
+pdf_path = "failingMAS.pdf"  # Updated to your PDF file
 if not os.path.exists(pdf_path):
     print(f"Error: PDF file not found at {pdf_path}")
     sys.exit(1)
 
 input_text = read_pdf(pdf_path)
-query = "Summarize, in depth, how Chain of Agents works, and how multiple agents can be useful for context window management and reasoning."
-
+# query = "Summarize, in depth, how Chain of Agents works, and how multiple agents can be useful for context window management and reasoning."
+query = "Summarize, in depth, the findings of this paper, and multi agent systems fail."
 # Process the text
 print("\nProcessing document with Chain of Agents...\n")
 

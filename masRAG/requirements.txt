@@ -1,0 +1,14 @@
+python-dotenv
+langchain
+langchain-openai
+langchain-core
+langchain-community
+langgraph
+tiktoken
+nltk
+chromadb
+uuid # Technically standard lib, but good to note
+
+# Add specific versions if needed, e.g.:
+# langchain>=0.1.0
+# langgraph>=0.0.30
