@@ -1,3 +1,4 @@
+import os
 import time
 import tiktoken
 import openai
