@@ -8,8 +8,8 @@ import subprocess
 import json
 from urllib.parse import urlparse
 from collections import defaultdict
+from tqdm import tqdm
 
-GITHUB_TOKEN = ""  # Replace with your GitHub token or leave empty for unauthenticated requests
 HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
 
 # Popularity thresholds 
@@ -898,63 +898,101 @@ class MCPAnalyzer:
 
     #adjust weights here 
     def analyze_servers(self):
-        """Analyze all MCP servers in the list"""
-        for server in self.servers:
-            owner = server.get('owner', '').strip()
-            repo = server.get('repo', '').strip()
-            stars = int(float(server.get('github_stars', 0)))
-            download_count = server.get('download_count', '0')
-            downloads = int(download_count) if download_count.isdigit() else 0
-            description = server.get('experimental_ai_generated_description', '')
-            print(f"Analyzing {owner}/{repo}...")
-            analysis = self.check_github_repo(owner, repo)
+        """Analyze all MCP servers with progress bar, save to CSV, and keep results in memory."""
+        output_file = "analysis_results.csv"
+        fieldnames = [
+            "owner", "repo", "popularity_score", "risk_score",
+            "doc_quality_score", "doc_quality_adjustment", "adjusted_risk_score",
+            "risk_category", "description"
+        ]
 
-            # Fetch and calculate popularity score
-            popularity_data = self.calculate_popularity_score(owner, repo, stars, downloads)
-            if popularity_data:
-                analysis.update(popularity_data)
-            analysis['description'] = description
-            popularity_score = popularity_data['popularity_score']
+        self.results = []
+        existing_rows = set()
 
-            #risk assessment
-            risk_score = analysis['risk_score'] #higher is worse counts "risky" words 
-            if(analysis["oauth_implementation"]): #good
-                risk_score -= 5
-            if(analysis["direct_api_tokens"]): #bad
-                risk_score += 5
-                
-            # Factor in documentation quality score (0-10)
-            # Good documentation reduces risk
-            doc_quality = analysis.get('doc_quality_score', 0)
-            doc_quality_factor = doc_quality / 10.0  # Normalize to 0-1
-            
-            # Apply doc quality factor to reduce risk score
-            # Good docs can reduce risk by up to 3 points
-            doc_quality_adjustment = -3 * doc_quality_factor
-            risk_score += doc_quality_adjustment
+        # Track processed servers
+        if os.path.exists(output_file):
+            with open(output_file, mode="r", newline='', encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    existing_rows.add((row["owner"], row["repo"]))
 
-                                    
-            # Adjust risk score based on trust
-            adjusted_risk = popularity_score - abs(risk_score/10)
-            
-            # Risk categories
-            if adjusted_risk > 0.2:
-                risk_category = "MINIMAL"
-            elif adjusted_risk > 0:
-                risk_category = "LOW"
-            elif adjusted_risk > -0.5:
-                risk_category = "MEDIUM"
-            else:
-                risk_category = "HIGH"
-                
-            analysis['adjusted_risk_score'] = adjusted_risk
-            analysis['risk_category'] = risk_category
-            analysis['doc_quality_adjustment'] = doc_quality_adjustment
-            
-            self.results.append(analysis)
-            
-            # manual rate limiting
-            time.sleep(0.1)
+        servers_to_analyze = [
+            s for s in self.servers
+            if (s.get('owner', '').strip(), s.get('repo', '').strip()) not in existing_rows
+        ]
+
+        try:
+            with open(output_file, mode="a", newline='', encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+                if os.path.getsize(output_file) == 0:
+                    writer.writeheader()
+
+                for server in tqdm(servers_to_analyze, desc="Analyzing servers", unit="server"):
+                    owner = server.get('owner', '').strip()
+                    repo = server.get('repo', '').strip()
+
+                    stars = int(float(server.get('github_stars', 0) or 0))
+                    download_count = server.get('download_count', '0') or '0'
+                    downloads = int(download_count) if download_count.isdigit() else 0
+                    description = server.get('experimental_ai_generated_description', '')
+
+                    analysis = self.check_github_repo(owner, repo)
+
+                    popularity_data = self.calculate_popularity_score(owner, repo, stars, downloads)
+                    if popularity_data:
+                        analysis.update(popularity_data)
+                    analysis['github_stars'] = stars
+                    analysis['download_count'] = downloads
+                    popularity_score = popularity_data['popularity_score']
+                    risk_score = analysis['risk_score']
+
+                    if analysis["oauth_implementation"]:
+                        risk_score -= 5
+                    if analysis["direct_api_tokens"]:
+                        risk_score += 5
+
+                    doc_quality = analysis.get('doc_quality_score', 0)
+                    doc_quality_factor = doc_quality / 10.0
+                    doc_quality_adjustment = -3 * doc_quality_factor
+                    risk_score += doc_quality_adjustment
+
+                    adjusted_risk = popularity_score - abs(risk_score / 10)
+
+                    if adjusted_risk > 0.2:
+                        risk_category = "MINIMAL"
+                    elif adjusted_risk > 0:
+                        risk_category = "LOW"
+                    elif adjusted_risk > -0.5:
+                        risk_category = "MEDIUM"
+                    else:
+                        risk_category = "HIGH"
+
+                    analysis['adjusted_risk_score'] = adjusted_risk
+                    analysis['risk_category'] = risk_category
+                    analysis['doc_quality_adjustment'] = doc_quality_adjustment
+                    analysis['description'] = description
+
+                    self.results.append(analysis)
+
+                    row = {
+                        "owner": owner,
+                        "repo": repo,
+                        "popularity_score": popularity_score,
+                        "risk_score": analysis['risk_score'],
+                        "doc_quality_score": doc_quality,
+                        "doc_quality_adjustment": doc_quality_adjustment,
+                        "adjusted_risk_score": adjusted_risk,
+                        "risk_category": risk_category,
+                        "description": description
+                    }
+                    writer.writerow(row)
+                    f.flush()
+                    time.sleep(0.1)
+        except KeyboardInterrupt:
+            print("\nInterrupted by user. Progress saved.")
+        except Exception as e:
+            print(f"\nError: {e}. Progress saved.")
         return self.results
 
 
@@ -1118,12 +1156,12 @@ class MCPAnalyzer:
         return output_file
 
 if __name__ == "__main__":
-    csv_file = os.path.join(os.getcwd(), "data", "pulsemcp_servers_all.csv")
+    #csv_file = os.path.join(os.getcwd(), "data", "sorted_data.csv")
+    csv_file = os.path.join(os.getcwd(), "sorted_data_by_stars.csv")
     
     analyzer = MCPAnalyzer(csv_file)
     if analyzer.load_servers():
         analyzer.analyze_servers()
-        
         # Generate both JSON and CSV reports
         analyzer.generate_report()
         analyzer._print_summary()
