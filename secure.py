@@ -9,7 +9,8 @@ import json
 from urllib.parse import urlparse
 from collections import defaultdict
 from tqdm import tqdm
-
+import base64
+GITHUB_TOKEN = ""  # Replace with your GitHub token or leave empty for unauthenticated requests
 HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
 
 # Popularity thresholds 
@@ -337,7 +338,7 @@ class MCPAnalyzer:
             print(f"Error loading CSV file: {e}")
             return False
 
-    def check_github_repo(self, owner, repo):
+    def check_github_repo(self, owner, repo, github_repo):
         """Check GitHub repository for suspicious code and configuration"""
         if not owner or not repo:
             return {"status": "error", "message": "Missing owner or repo"}
@@ -370,7 +371,7 @@ class MCPAnalyzer:
             )
             
             # Check documentation quality
-            readme_quality = self._analyze_readme_quality(temp_dir)
+            readme_quality = self._analyze_readme_quality(github_repo)
             result["doc_quality_score"] = readme_quality["score"]
             result["doc_quality_details"] = readme_quality["details"]
             
@@ -412,7 +413,7 @@ class MCPAnalyzer:
         
         return result
         
-    def _analyze_readme_quality(self, repo_path):
+    def _analyze_readme_quality(self, github_url):
         """Analyze the quality of README documentation"""
         result = {
             "score": 0,
@@ -449,33 +450,55 @@ class MCPAnalyzer:
             # Additional common patterns
             "documentation.md", "DOCUMENTATION.md", "guide.md", "GUIDE.md", "index.md", "manual.md", "MANUAL.md"
         ]
-        readme_path = None
-        
-        for pattern in readme_patterns:
-            potential_path = os.path.join(repo_path, pattern)
-            if os.path.exists(potential_path):
-                readme_path = potential_path
-                result["details"]["readme_found"] = True
-                break
-                
-        if not readme_path:
-            # If no main README, check if there's a docs directory with documentation
-            docs_dir = os.path.join(repo_path, "docs")
-            if os.path.exists(docs_dir) and os.path.isdir(docs_dir):
-                # Check for any markdown file in docs directory
-                for file in os.listdir(docs_dir):
-                    if file.endswith(".md") or file.endswith(".txt"):
-                        potential_path = os.path.join(docs_dir, file)
-                        readme_path = potential_path
-                        result["details"]["readme_found"] = True
-                        break
-        
-        if not readme_path:
-            return result
-            
+        if not github_url:
+           return None
+        print(github_url)
         try:
-            with open(readme_path, 'r', encoding='utf-8', errors='replace') as f:
-                content = f.read()
+            # Parse the URL to get repo path and subdirectory
+            parts = github_url.split('github.com/')
+            if len(parts) != 2:
+                return None
+            
+            path_parts = parts[1].split('/tree/HEAD/')
+            
+            # Get base repo path and subdirectory if it exists
+            repo_path = path_parts[0]
+            subdir = path_parts[1] if len(path_parts) > 1 else ''
+            
+            # Remove .git if present in repo_path
+            repo_path = repo_path.replace('.git', '')
+            
+            # Construct API URL for contents of the specific directory
+            api_url = f"https://api.github.com/repos/{repo_path}/contents"
+            if subdir:
+                api_url = f"{api_url}/{subdir}"
+            
+            # First, get the contents of the directory
+            response = requests.get(api_url, headers=HEADERS, timeout=10)
+            response.raise_for_status()
+            contents = response.json()
+            
+            # Look for README file (case-insensitive)
+            readme_file = next(
+                (item for item in contents
+                    if item['type'] == 'file'
+                    and item['name'].lower().startswith('readme')),
+                None
+            )
+            
+            if not readme_file:
+                print(f"No README found in {github_url}")
+                return None
+            
+            # Get the README content
+            readme_response = requests.get(readme_file['url'], headers=HEADERS, timeout=10)
+            readme_response.raise_for_status()
+            readme_data = readme_response.json()
+            
+            # Decode the base64 content
+            encoded_content = readme_data.get('content', '')
+            content = base64.b64decode(encoded_content).decode('utf-8') if encoded_content else ''
+            print(content)
                 
             # Analyze size and content
             result["details"]["readme_size_bytes"] = len(content)
@@ -931,13 +954,14 @@ class MCPAnalyzer:
                 for server in tqdm(servers_to_analyze, desc="Analyzing servers", unit="server"):
                     owner = server.get('owner', '').strip()
                     repo = server.get('repo', '').strip()
+                    github_url = server.get('server_github_url', '').strip()
 
                     stars = int(float(server.get('github_stars', 0) or 0))
                     download_count = server.get('download_count', '0') or '0'
                     downloads = int(download_count) if download_count.isdigit() else 0
                     description = server.get('experimental_ai_generated_description', '')
 
-                    analysis = self.check_github_repo(owner, repo)
+                    analysis = self.check_github_repo(owner, repo, github_url)
 
                     popularity_data = self.calculate_popularity_score(owner, repo, stars, downloads)
                     if popularity_data:
