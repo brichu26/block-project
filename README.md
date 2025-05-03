@@ -17,7 +17,7 @@ This project explores different architectures for building multi-agent systems (
 3.  **Multi-Agent System for RAG (`masRAG/`)**
     *   **Description:** Implements a modular, multi-agent Retrieval-Augmented Generation (masRAG) system using LangGraph. The workflow starts with a manager agent routing queries to a RAG retriever, which fetches relevant code/document chunks from a vector database. Specialized worker agents process these chunks in parallel, extracting relevant information. The manager agent then aggregates and synthesizes the worker outputs into a final response. The system is designed for codebase and document QA, supports dynamic agent/task assignment, and is extensible for new roles or evaluation pipelines. The evaluation pipeline integrates Anthropic Claude for automated LLM-based assessment.
     *   **Key Features:** Multi-agent orchestration with LangGraph, RAG pipeline, parallel worker execution, dynamic task assignment, manager aggregation, codebase/document support, vector DB integration, and LLM-based evaluation.
-    *   **Main File:** `masRAG/main.py` (run pipeline), `masRAG/evaluate.py` (LLM-based evaluation)
+    *   **Main File:** `masRAG/main.py` (run pipeline)
 
 ## Setup
 
@@ -32,7 +32,6 @@ This project explores different architectures for building multi-agent systems (
     source venv/bin/activate # On Windows use `venv\Scripts\activate`
     ```
 3.  **Install dependencies:**
-    *   A `requirements.txt` file is recommended. If one doesn't exist, you'll need to install packages manually (e.g., `pip install langchain langgraph langchain-openai python-dotenv pypdf tiktoken nltk`). Create one using `pip freeze > requirements.txt`.
     ```bash
     pip install -r requirements.txt
     ```
@@ -40,7 +39,6 @@ This project explores different architectures for building multi-agent systems (
     ```
     OPENAI_API_KEY='your_openai_api_key_here'
     ```
-5.  **NLTK Data:** The first time you run the `hierarchicaltest.py` script (or potentially others if they use NLTK), it will attempt to download the necessary 'punkt' tokenizer data from NLTK.
 
 ## Running the Systems
 
