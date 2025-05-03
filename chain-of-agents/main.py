@@ -1,8 +1,13 @@
 from typing import Optional, Iterator, Dict
-from .agents import WorkerAgent, ManagerAgent
-from .utils import chunk_text_algorithm2, get_task_prompts
+from agents import WorkerAgent, ManagerAgent
+from utils import chunk_text_algorithm2, get_task_prompts, read_pdf
 import logging
 import json
+import os
+import sys
+import argparse
+from dotenv import load_dotenv
+import pathlib
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -130,3 +135,61 @@ class ChainOfAgents:
             "type": "manager",
             "content": final_output
         }
+
+def main():
+    parser = argparse.ArgumentParser(description="Run Chain of Agents on a PDF document.")
+    parser.add_argument("pdf_path", help="Path to the PDF file to process.")
+    parser.add_argument("query", help="Query to ask the agents.")
+    parser.add_argument("--task_type", default="summarization", choices=["summarization", "qa", "code"], help="Task type for the agents.")
+    parser.add_argument("--worker_model", default="gpt-4o", help="OpenAI model for worker agents.")
+    parser.add_argument("--manager_model", default="gpt-4o", help="OpenAI model for manager agent.")
+    parser.add_argument("--chunk_size", type=int, default=8000, help="Chunk size for splitting the document.")
+    args = parser.parse_args()
+
+    # Load environment variables
+    env_path = pathlib.Path('.') / '.env'
+    parent_env_path = pathlib.Path('..') / '.env'
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path)
+    elif parent_env_path.exists():
+        load_dotenv(dotenv_path=parent_env_path)
+    else:
+        print(f"No .env file found in {env_path.resolve()} or {parent_env_path.resolve()}. Please create one with your OpenAI API key.")
+        sys.exit(1)
+
+    # Verify API key is loaded
+    if not os.getenv("OPENAI_API_KEY"):
+        print("OPENAI_API_KEY not found in environment variables")
+        sys.exit(1)
+
+    # Read PDF file
+    if not os.path.exists(args.pdf_path):
+        print(f"Error: PDF file not found at {args.pdf_path}")
+        sys.exit(1)
+    input_text = read_pdf(args.pdf_path)
+
+    # Get prompts
+    worker_prompt, manager_prompt = get_task_prompts(args.task_type)
+
+    # Create Chain of Agents instance
+    chain = ChainOfAgents(
+        worker_model=args.worker_model,
+        manager_model=args.manager_model,
+        chunk_size=args.chunk_size,
+        task_type=args.task_type,
+        worker_prompt=worker_prompt,
+        manager_prompt=manager_prompt
+    )
+
+    # Process text
+    final_output = chain.process(input_text, args.query)
+
+    print("\n" + "=" * 80)
+    print("FINAL RESPONSE")
+    print("=" * 80 + "\n")
+
+    print(final_output)
+    print("\n" + "=" * 80)
+
+if __name__ == "__main__":
+    main()

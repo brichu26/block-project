@@ -139,6 +139,62 @@ def split_into_chunks(text: str, chunk_size: int) -> List[str]:
     logger.info(f"Split text into {len(chunks)} chunks")
     return chunks
 
+
+# --- Constants for Prompts ---
+
+QA_WORKER_PROMPT = """You are a worker agent in a Chain-of-Agents system analyzing a document to answer a question.
+Your task is to identify key information related to the user's query and create a Communication Unit (CU) that contains:
+1. Relevant evidence from your chunk of text
+2. Any reasoning steps that connect to previous evidence
+3. Important context that might be needed to answer the question
+
+Focus on being comprehensive but concise. Your output will be used by other agents to continue the reasoning chain."""
+
+QA_MANAGER_PROMPT = """You are a manager agent in a Chain-of-Agents system.
+Your task is to synthesize the final Communication Unit (CU) into a coherent, comprehensive answer to the user's query.
+The CU contains accumulated evidence and reasoning from multiple worker agents who have processed different parts of a long document.
+Provide a direct, factual answer based solely on the information in the CU."""
+
+SUMMARIZATION_WORKER_PROMPT = """You are a worker agent in a Chain-of-Agents system analyzing a document to create a summary.
+Your task is to create a Communication Unit (CU) that:
+1. Summarizes the key points from your chunk of text
+2. Integrates with the summary from previous chunks
+3. Maintains a coherent narrative flow
+
+Focus on capturing the most important information while maintaining continuity with previous content."""
+
+SUMMARIZATION_MANAGER_PROMPT = """You are a manager agent in a Chain-of-Agents system.
+Your task is to synthesize the final Communication Unit (CU) into a coherent, comprehensive summary.
+The CU contains a progressive summary built by multiple worker agents who have processed different parts of a long document.
+Create a well-structured final summary that captures the key points and maintains a logical flow."""
+
+CODE_WORKER_PROMPT = """You are a worker agent in a Chain-of-Agents system analyzing code to complete or explain it.
+Your task is to create a Communication Unit (CU) that:
+1. Identifies key functions, classes, and variables from your chunk
+2. Builds on the understanding from previous chunks
+3. Notes any patterns or dependencies relevant to the query
+
+Focus on technical accuracy and maintaining the logical structure of the code."""
+
+CODE_MANAGER_PROMPT = """You are a manager agent in a Chain-of-Agents system.
+Your task is to synthesize the final Communication Unit (CU) into a coherent code completion or explanation.
+The CU contains accumulated code understanding from multiple worker agents who have processed different parts of a codebase.
+Provide a technically accurate and well-structured response that directly addresses the query."""
+
+DEFAULT_WORKER_PROMPT = """You are a worker agent in a Chain-of-Agents system.
+Your task is to analyze your portion of a document and create a Communication Unit (CU) that builds on previous information.
+Identify key information related to the user's query and provide clear, concise analysis."""
+
+DEFAULT_MANAGER_PROMPT = """You are a manager agent in a Chain-of-Agents system.
+Your task is to synthesize the final Communication Unit (CU) into a coherent, comprehensive response.
+The CU contains accumulated information from multiple worker agents who have processed different parts of a long document.
+Provide a direct response that addresses the user's query."""
+
+# --- End Prompt Constants ---
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 def get_task_prompts(task_type: str = "qa") -> Tuple[str, str]:
     """
     Get task-specific system prompts for worker and manager agents.
@@ -150,56 +206,16 @@ def get_task_prompts(task_type: str = "qa") -> Tuple[str, str]:
         tuple[str, str]: (worker_prompt, manager_prompt)
     """
     if task_type == "qa":
-        worker_prompt = """You are a worker agent in a Chain-of-Agents system analyzing a document to answer a question.
-Your task is to identify key information related to the user's query and create a Communication Unit (CU) that contains:
-1. Relevant evidence from your chunk of text
-2. Any reasoning steps that connect to previous evidence
-3. Important context that might be needed to answer the question
-
-Focus on being comprehensive but concise. Your output will be used by other agents to continue the reasoning chain."""
-
-        manager_prompt = """You are a manager agent in a Chain-of-Agents system.
-Your task is to synthesize the final Communication Unit (CU) into a coherent, comprehensive answer to the user's query.
-The CU contains accumulated evidence and reasoning from multiple worker agents who have processed different parts of a long document.
-Provide a direct, factual answer based solely on the information in the CU."""
-
+        worker_prompt = QA_WORKER_PROMPT
+        manager_prompt = QA_MANAGER_PROMPT
     elif task_type == "summarization":
-        worker_prompt = """You are a worker agent in a Chain-of-Agents system analyzing a document to create a summary.
-Your task is to create a Communication Unit (CU) that:
-1. Summarizes the key points from your chunk of text
-2. Integrates with the summary from previous chunks
-3. Maintains a coherent narrative flow
-
-Focus on capturing the most important information while maintaining continuity with previous content."""
-
-        manager_prompt = """You are a manager agent in a Chain-of-Agents system.
-Your task is to synthesize the final Communication Unit (CU) into a coherent, comprehensive summary.
-The CU contains a progressive summary built by multiple worker agents who have processed different parts of a long document.
-Create a well-structured final summary that captures the key points and maintains a logical flow."""
-
+        worker_prompt = SUMMARIZATION_WORKER_PROMPT
+        manager_prompt = SUMMARIZATION_MANAGER_PROMPT
     elif task_type == "code":
-        worker_prompt = """You are a worker agent in a Chain-of-Agents system analyzing code to complete or explain it.
-Your task is to create a Communication Unit (CU) that:
-1. Identifies key functions, classes, and variables from your chunk
-2. Builds on the understanding from previous chunks
-3. Notes any patterns or dependencies relevant to the query
-
-Focus on technical accuracy and maintaining the logical structure of the code."""
-
-        manager_prompt = """You are a manager agent in a Chain-of-Agents system.
-Your task is to synthesize the final Communication Unit (CU) into a coherent code completion or explanation.
-The CU contains accumulated code understanding from multiple worker agents who have processed different parts of a codebase.
-Provide a technically accurate and well-structured response that directly addresses the query."""
-
+        worker_prompt = CODE_WORKER_PROMPT
+        manager_prompt = CODE_MANAGER_PROMPT
     else:
-        # Default generic prompts
-        worker_prompt = """You are a worker agent in a Chain-of-Agents system.
-Your task is to analyze your portion of a document and create a Communication Unit (CU) that builds on previous information.
-Identify key information related to the user's query and provide clear, concise analysis."""
-
-        manager_prompt = """You are a manager agent in a Chain-of-Agents system.
-Your task is to synthesize the final Communication Unit (CU) into a coherent, comprehensive response.
-The CU contains accumulated information from multiple worker agents who have processed different parts of a long document.
-Provide a direct response that addresses the user's query."""
-
+        logger.warning(f"Unknown task_type '{task_type}'. Using default prompts.")
+        worker_prompt = DEFAULT_WORKER_PROMPT
+        manager_prompt = DEFAULT_MANAGER_PROMPT
     return worker_prompt, manager_prompt

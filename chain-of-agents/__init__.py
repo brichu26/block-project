@@ -1,6 +1,6 @@
-from .main import ChainOfAgents
-from .agents import WorkerAgent, ManagerAgent
-from .utils import split_into_chunks, get_task_prompts
+from .main import *
+from .agents import *
+from .utils import *
 
 __version__ = "0.1.0"
 
