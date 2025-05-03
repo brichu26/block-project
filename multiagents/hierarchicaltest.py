@@ -7,25 +7,85 @@ import nltk
 from pypdf import PdfReader # To read the PDF text directly if needed
 from dotenv import load_dotenv
 import logging
+
 # Langchain/LangGraph imports
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END, START
 
-logging.basicConfig(level=logging.INFO)
+# --- Configuration Constants ---
+PDF_PATH = "coa.pdf" # Path to the source PDF document
+QUERY = "Summarize, in depth, how Chain of Agents works, and how multiple agents can be useful for context window management and reasoning."
+WORKER_MODEL = "gpt-4o-mini"
+MANAGER_MODEL = "gpt-4o"
+TOKENIZER_MODEL = "gpt-4o-mini" # Model used for token counting during chunking
+CHUNK_WINDOW_SIZE = 8000 # Max tokens for a worker's context (including prompt)
+CHUNK_BUFFER_TOKENS = 100 # Buffer for prompt overhead in chunking
+LANGGRAPH_RECURSION_LIMIT = 150 # Safety limit for graph execution
+
+# Prompts
+WORKER_JUDGE_PROMPT = """You are an expert relevance assessor.
+Read the user query and the provided text chunk.
+Determine if the text chunk contains any information DIRECTLY RELEVANT to answering the query.
+Answer ONLY with 'yes' or 'no'.
+
+Query: {query}
+Text Chunk:
+---
+{chunk}
+---
+
+Relevant? (yes/no):"""
+
+WORKER_EXTRACT_PROMPT = """You are a worker agent analyzing a portion of a document.
+Read the following text chunk and the original user query.
+Extract and summarize only the key information relevant to answering the original query.
+Be concise and focus only on relevance to the query. Ensure your summary is self-contained.
+If no information is relevant, state 'No relevant information found in this chunk.'
+
+Original Query: {query}
+Text Chunk:
+---
+{chunk}
+---
+
+Relevant Information Summary:"""
+
+MANAGER_PROMPT = """You are the manager agent.
+You have received summaries from several worker agents who analyzed different parts of a long document based on the original query.
+Synthesize these summaries into a single, coherent, and comprehensive final answer to the query.
+If no relevant summaries were provided, state that you could not find the answer in the document.
+
+Original Query: {query}
+
+Worker Summaries (combine these pieces of information):
+---
+{summaries}
+---
+
+Final Answer:"""
+# --- End Configuration ---
+
+# Setup Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-load_dotenv()# --- 0. Helper Functions & Setup ---
+# Load Environment Variables (for API keys)
+load_dotenv()
 
-# Download sentence tokenizer data
-print("Downloading NLTK 'punkt' tokenizer data...")
-nltk.download('punkt')
-nltk.download('punkt_tab')
-nltk.download('wordnet')
-nltk.download('omw-1.4')
-nltk.download('punkt_tab')
-nltk.data.find('tokenizers/punkt')
+# --- 0. Helper Functions & Setup ---
 
+def setup_nltk():
+    """Downloads necessary NLTK data if not already present."""
+    try:
+        nltk.data.find('tokenizers/punkt')
+        logger.info("NLTK 'punkt' tokenizer data found.")
+    except nltk.downloader.DownloadError:
+        logger.info("Downloading NLTK 'punkt' tokenizer data...")
+        nltk.download('punkt', quiet=True)
+
+# Call NLTK setup once
+setup_nltk()
 
 def split_into_sentences(text: str) -> List[str]:
     """Splits text into sentences using NLTK."""
@@ -36,11 +96,11 @@ def get_tokenizer(model_name="gpt-4o-mini"):
     try:
         return tiktoken.encoding_for_model(model_name)
     except KeyError:
-        print(f"Warning: Model {model_name} not found for tiktoken. Using cl100k_base.")
+        logger.warning(f"Model {model_name} not found for tiktoken. Using cl100k_base.")
         return tiktoken.get_encoding("cl100k_base")
 
-# Initialize tokenizer globally
-tokenizer = get_tokenizer()
+# Initialize tokenizer globally using constant
+tokenizer = get_tokenizer(TOKENIZER_MODEL)
 
 def count_tokens(text: str) -> int:
     """Counts tokens using the initialized tokenizer."""
@@ -49,7 +109,7 @@ def count_tokens(text: str) -> int:
 def chunk_text_algorithm2(
     source_text: str,
     query: str,
-    instruction: str,
+    instruction: str, # Pass the specific instruction used (judge or extract)
     window_size: int,
     tokenizer=None,
     buffer_tokens: int = 100
@@ -67,12 +127,10 @@ def chunk_text_algorithm2(
         List[str]: List of text chunks
     """
     if tokenizer is None:
-        try:
-            tokenizer = tiktoken.encoding_for_model("gpt-4o")
-        except Exception:
-            tokenizer = tiktoken.get_encoding("cl100k_base")
-    
-    # Calculate budget
+        # Default to the global tokenizer if none provided
+        tokenizer = get_tokenizer(TOKENIZER_MODEL)
+
+    # Calculate budget based on the passed instruction
     query_tokens = len(tokenizer.encode(query))
     instruction_tokens = len(tokenizer.encode(instruction))
     budget = window_size - query_tokens - instruction_tokens - buffer_tokens
@@ -80,7 +138,14 @@ def chunk_text_algorithm2(
         raise ValueError("Window size too small for query and instruction.")
     
     # Sentence splitting
-    sentences = nltk.sent_tokenize(source_text)
+    try:
+        sentences = nltk.sent_tokenize(source_text)
+    except Exception as e:
+        logger.error(f"NLTK sentence tokenization failed: {e}. Ensure 'punkt' data is downloaded.")
+        # Fallback to simple newline splitting if NLTK fails
+        sentences = source_text.split('\n')
+        logger.warning("Falling back to newline splitting for chunking.")
+
     chunks = []
     current_chunk = ""
     current_tokens = 0
@@ -106,214 +171,230 @@ def chunk_text_algorithm2(
     logger.info(f"[Algorithm2] Chunked text into {len(chunks)} chunks (budget={budget})")
     return chunks
     
-# --- 2. Define Agent State ---
+# --- 1. Define Agent State ---
 class HierarchicalAgentState(TypedDict):
     query: str
+    source_text: str # Add source text to state if needed by nodes
     chunks: List[str]
-    # Store results from workers that deemed their chunk useful
     relevant_communication_units: Annotated[List[str], operator.add]
     final_answer: str
     worker_error: Annotated[List[bool], operator.add] # Flag if any worker fails
 
-# --- 3. Define Nodes (Worker and Manager) ---
-
-# LLM Initialization - Requires OPENAI_API_KEY in environment
+# --- 2. Define LLM Clients ---
 try:
-    # Worker LLMs (cheaper model)
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    judgement_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    # Manager LLM (higher-quality model)
-    manager_llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    # Worker LLMs (potentially cheaper model)
+    worker_llm = ChatOpenAI(model=WORKER_MODEL, temperature=0)
+    # Manager LLM (potentially more capable model)
+    manager_llm = ChatOpenAI(model=MANAGER_MODEL, temperature=0)
+    logger.info(f"Initialized LLMs: Worker ({WORKER_MODEL}), Manager ({MANAGER_MODEL})")
 except Exception as e:
-    print(f"Failed to initialize OpenAI models. Ensure OPENAI_API_KEY is set. Error: {e}")
+    logger.error(f"Failed to initialize OpenAI LLMs: {e}. Check API key and model names.")
     exit()
 
-
-# Define prompts (adapt from paper's Appendix Table 11/12 and add judgement logic)
-WORKER_JUDGEMENT_PROMPT = """
-Given the following text chunk and a query, determine if the chunk contains information potentially relevant to answering the query. Answer only with 'YES' or 'NO'.
-
-Query: {query}
-Text Chunk:
----
-{chunk}
----
-
-Contains Relevant Information (YES/NO):"""
-
-WORKER_PROCESS_PROMPT = """
-You are a worker agent analyzing a portion of a document. Read the following text chunk. Extract and summarize only the key information relevant to answering the original query. Be concise and focus only on relevance to the query. If no information is relevant, say 'No relevant information found in this chunk.'
-
-Original Query: {query}
-Text Chunk:
----
-{chunk}
----
-
-Relevant Information Summary:"""
-
-MANAGER_PROMPT = """
-You are the manager agent. You have received summaries from several worker agents who analyzed different parts of a long document based on the original query. Synthesize these summaries into a single, coherent, and comprehensive final answer to the query. If no relevant summaries were provided, state that you could not find the answer in the document.
-
-Original Query: {query}
-
-Worker Summaries (combine these pieces of information):
----
-{summaries}
----
-
-Final Answer:"""
+# --- 3. Define Nodes (Worker and Manager) ---
 
 def worker_node(state: HierarchicalAgentState, chunk_index: int):
     """Worker node: judges usefulness and processes chunk if useful."""
     query = state["query"]
-    chunk = state["chunks"][chunk_index]
-    print(f"--- Worker {chunk_index+1} Processing Chunk ({len(chunk)} chars) ---")
+    chunks = state["chunks"]
+    chunk = chunks[chunk_index]
+    node_name = f"Worker {chunk_index + 1}/{len(chunks)}"
+    logger.info(f"--- {node_name}: Processing Chunk --- ")
 
-    communication_unit = ""
-    is_useful = False
+    is_relevant = False
+    summary = ""
+    error_occurred = False
+
     try:
-        # a) Judge Usefulness
-        judgement_prompt_filled = WORKER_JUDGEMENT_PROMPT.format(query=query, chunk=chunk)
-        judgement_response = judgement_llm.invoke([HumanMessage(content=judgement_prompt_filled)])
-        judgement_text = judgement_response.content.strip().upper()
-        is_useful = "YES" in judgement_text
+        # 1. Judge Relevance
+        judge_prompt = WORKER_JUDGE_PROMPT.format(query=query, chunk=chunk)
+        judge_response = worker_llm.invoke([HumanMessage(content=judge_prompt)])
+        relevance_decision = judge_response.content.strip().lower()
+        logger.info(f"{node_name}: Relevance decision = '{relevance_decision}'")
 
-        print(f"Worker {chunk_index+1} judged chunk useful: {is_useful} (Response: '{judgement_text}')")
-
-        if is_useful:
-            # b) Process Chunk if Useful
-            process_prompt_filled = WORKER_PROCESS_PROMPT.format(query=query, chunk=chunk)
-            process_response = llm.invoke([HumanMessage(content=process_prompt_filled)])
-            communication_unit = process_response.content
-            # Filter out empty or placeholder responses
-            if "no relevant information" in communication_unit.lower() or len(communication_unit) < 10:
-                 print(f"Worker {chunk_index+1} produced non-substantive CU: '{communication_unit[:100]}...' - Treating as not useful.")
-                 is_useful = False # Override usefulness if processing yields nothing relevant
-                 communication_unit = "" # Clear it
+        if 'yes' in relevance_decision:
+            is_relevant = True
+            # 2. Extract/Summarize if Relevant
+            extract_prompt = WORKER_EXTRACT_PROMPT.format(query=query, chunk=chunk)
+            summary_response = worker_llm.invoke([HumanMessage(content=extract_prompt)])
+            summary = summary_response.content.strip()
+            # Avoid adding the placeholder if extraction actually failed
+            if "No relevant information found" not in summary and summary:
+                logger.info(f"{node_name}: Extracted relevant summary (length {len(summary)})." )
             else:
-                 print(f"Worker {chunk_index+1} produced CU: {communication_unit[:150]}...") # Print snippet
+                logger.info(f"{node_name}: Judged relevant, but found no specific info to extract.")
+                is_relevant = False # Treat as not relevant if summary is empty/placeholder
+                summary = "" # Ensure empty summary if not truly relevant
+        else:
+            logger.info(f"{node_name}: Chunk deemed not relevant.")
 
     except Exception as e:
-        print(f"!!! Error in Worker {chunk_index+1}: {e}")
-        # Decide how to handle errors, e.g., return empty or raise exception
-        # Returning empty lets the process continue without this worker's input
-        return {"relevant_communication_units": [], "worker_error": [True]} # Flag error as list
+        logger.error(f"!!! Error in {node_name}: {e}")
+        error_occurred = True
+        # Optionally return a specific error message or placeholder
+        summary = f"[Error in {node_name}]"
 
-    # Return the CU if deemed useful *after* processing, otherwise empty list
-    return {"relevant_communication_units": [communication_unit] if is_useful else [], "worker_error": [False]}
-
+    # Return results: only add summary if relevant, always add error status
+    return {
+        "relevant_communication_units": [summary] if is_relevant else [],
+        "worker_error": [error_occurred]
+    }
 
 def manager_node(state: HierarchicalAgentState):
     """Manager node: synthesizes relevant CUs into the final answer."""
-    print("\n--- Manager Node Synthesizing ---")
+    logger.info("--- Manager Node: Synthesizing Final Answer ---")
     query = state["query"]
-    relevant_cus = state["relevant_communication_units"]
+    relevant_cus = state.get("relevant_communication_units", []) # Use .get for safety
 
     if not relevant_cus:
-        print("Manager: No relevant information found by workers.")
+        logger.warning("Manager: No relevant information found by workers.")
         final_answer = "Based on the analysis of the document chunks, no relevant information was found to answer the query."
         return {"final_answer": final_answer}
 
     # Combine CUs for the manager prompt
     summaries_text = "\n\n---\n\n".join(relevant_cus)
     manager_prompt_filled = MANAGER_PROMPT.format(query=query, summaries=summaries_text)
+    logger.info(f"Manager: Synthesizing {len(relevant_cus)} summaries.")
 
     try:
         final_response = manager_llm.invoke([HumanMessage(content=manager_prompt_filled)])
         final_answer = final_response.content
-        print(f"Manager produced final answer: {final_answer[:150]}...") # Print snippet
+        logger.info(f"Manager: Produced final answer (length {len(final_answer)}).")
     except Exception as e:
-         print(f"!!! Error in Manager Node: {e}")
+         logger.error(f"!!! Error in Manager Node: {e}")
          final_answer = "An error occurred while synthesizing the final answer."
 
     return {"final_answer": final_answer}
 
-# --- 4. Build the Graph ---
+# --- 4. Main Execution Logic ---
+def main():
+    """Loads data, builds and runs the LangGraph workflow."""
+    logger.info("--- Starting Hierarchical Agent Workflow --- ")
 
-# Get PDF Text (using the provided coa.pdf)
-pdf_path = "coa.pdf" # Make sure this file is in the same directory
-source_text = ""
-try:
-    reader = PdfReader(pdf_path)
-    for page in reader.pages:
-        source_text += page.extract_text() + "\n" # Add newline between pages
-    print(f"Successfully read {len(reader.pages)} pages from {pdf_path}.")
-except FileNotFoundError:
-    print(f"Error: PDF file not found at '{pdf_path}'. Please place it in the script's directory.")
-    exit()
-except Exception as e:
-    print(f"Error reading PDF: {e}")
-    exit()
+    # Get PDF Text
+    source_text = ""
+    try:
+        reader = PdfReader(PDF_PATH)
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text: # Add text only if extraction was successful
+                 source_text += page_text + "\n"
+        logger.info(f"Successfully read {len(reader.pages)} pages from '{PDF_PATH}'. Total chars: {len(source_text)}")
+    except FileNotFoundError:
+        logger.error(f"Error: PDF file not found at '{PDF_PATH}'. Please place it in the script's directory.")
+        return # Exit main function
+    except Exception as e:
+        logger.error(f"Error reading PDF '{PDF_PATH}': {e}")
+        return # Exit main function
 
-# Hardcoded Query and Parameters
-query = "Summarize, in depth, how Chain of Agents works, and how multiple agents can be useful for context window management and reasoning."
-worker_instruction = "You are a worker agent analyzing a portion of a document. Read the following text chunk. Extract and summarize only the key information relevant to answering the original query. Be concise and focus only on relevance to the query. If no information is relevant, say 'No relevant information found in this chunk." # Simplified instruction
-# Use a smaller window for testing if needed, but paper used 8k
-window_size = 8000
+    if not source_text.strip():
+        logger.error("Error: Extracted text from PDF is empty.")
+        return
 
-# Initial chunking
-try:
-    chunks = chunk_text_algorithm2(
-        source_text=source_text,
-        query=query,
-        instruction=worker_instruction,
-        window_size=window_size,
-        tokenizer=tokenizer
-    )
-except ValueError as e:
-    print(f"Error during chunking: {e}")
-    exit()
+    # Initial chunking using the 'judge' prompt length for budget calculation initially
+    # (Assuming judge prompt is representative or we accept slight overflow on extract)
+    logger.info(f"Chunking text for query: '{QUERY[:50]}...' with window size {CHUNK_WINDOW_SIZE}")
+    try:
+        # We pass WORKER_JUDGE_PROMPT here for budget calculation, as it's likely the first step.
+        # Alternatively, calculate budget based on the longer prompt if guarantees are needed.
+        chunks = chunk_text_algorithm2(
+            source_text=source_text,
+            query=QUERY,
+            instruction=WORKER_JUDGE_PROMPT, # Use judge prompt for budget estimate
+            window_size=CHUNK_WINDOW_SIZE,
+            tokenizer=tokenizer,
+            buffer_tokens=CHUNK_BUFFER_TOKENS
+        )
+    except ValueError as e:
+        logger.error(f"Error during chunking: {e}")
+        return
+    except Exception as e: # Catch unexpected chunking errors
+        logger.error(f"Unexpected error during chunking: {e}")
+        return
 
-if not chunks:
-    print("Error: No chunks were generated. Check window size and input text.")
-    exit()
+    if not chunks:
+        logger.error("Error: No chunks were generated. Check window size, buffer, and input text.")
+        return
 
-# Workflow Graph
-workflow = StateGraph(HierarchicalAgentState)
+    logger.info(f"Generated {len(chunks)} chunks for processing.")
 
-# Add Manager Node
-workflow.add_node("manager", manager_node)
+    # Build Workflow Graph
+    workflow = StateGraph(HierarchicalAgentState)
 
-# Dynamically add worker nodes based on the number of chunks
-num_workers = len(chunks)
-worker_node_names = []
-for i in range(num_workers):
-    node_name = f"worker_{i+1}"
-    worker_node_names.append(node_name)
-    # Use functools.partial to pass the chunk_index to the node function
-    workflow.add_node(node_name, partial(worker_node, chunk_index=i))
-    # Workers all lead to the manager node
-    workflow.add_edge(node_name, "manager")
+    # Add Manager Node
+    workflow.add_node("manager", manager_node)
 
-# Set the entry point - Workers run in parallel after START
-if worker_node_names:
-    workflow.set_entry_point(worker_node_names[0])
-for node_name in worker_node_names:
-    workflow.add_edge(START, node_name)
+    # Dynamically add worker nodes based on the number of chunks
+    num_workers = len(chunks)
+    worker_node_names = []
+    for i in range(num_workers):
+        node_name = f"worker_{i+1}"
+        worker_node_names.append(node_name)
+        # Use functools.partial to pass the chunk_index to the node function
+        workflow.add_node(node_name, partial(worker_node, chunk_index=i))
+        # Workers all lead to the manager node
+        workflow.add_edge(node_name, "manager")
 
-# Manager node leads to the end
-workflow.add_edge("manager", END)
+    # Set the entry point - Workers run in parallel after START
+    # Ensure entry point exists before setting
+    if worker_node_names:
+        # Add edges from START to all workers
+        for node_name in worker_node_names:
+             workflow.add_edge(START, node_name)
+        # Setting the entry point isn't strictly necessary when START branches to all workers,
+        # but it can be clearer. LangGraph handles the parallel start.
+        # workflow.set_entry_point(worker_node_names[0]) # Optional: officially marks one as first
+    else:
+        logger.error("No worker nodes created, cannot build graph.")
+        return
 
-# Compile the graph
-app = workflow.compile()
+    # Manager node leads to the end
+    workflow.add_edge("manager", END)
 
-# --- 5. Run the Graph ---
-initial_state = {
-    "query": query,
-    "chunks": chunks,
-    "relevant_communication_units": [], # Initialize as empty list
-    "final_answer": "",
-    "worker_error": [], # Initialize as empty list
-}
+    # Compile the graph
+    try:
+        app = workflow.compile()
+        logger.info("LangGraph workflow compiled successfully.")
+    except Exception as e:
+        logger.error(f"Failed to compile LangGraph workflow: {e}")
+        return
 
-print("\n--- Invoking LangGraph Workflow ---")
-# Invoke the graph
-# Add recursion limit for safety with potentially many chunks/nodes
-final_state = app.invoke(initial_state, {"recursion_limit": 100}) # Adjust limit if needed
+    # --- 5. Run the Graph ---
+    initial_state = {
+        "query": QUERY,
+        "source_text": source_text, # Pass source_text if needed later
+        "chunks": chunks,
+        "relevant_communication_units": [], # Initialize as empty list
+        "final_answer": "",
+        "worker_error": [], # Initialize as empty list
+    }
 
-print("\n--- Final Answer ---")
-print(final_state.get('final_answer', 'No final answer generated.'))
+    logger.info("--- Invoking LangGraph Workflow ---")
+    final_state = None
+    try:
+        # Invoke the graph
+        final_state = app.invoke(initial_state, {"recursion_limit": LANGGRAPH_RECURSION_LIMIT})
+        logger.info("--- LangGraph Workflow Invocation Complete ---")
+    except Exception as e:
+        logger.error(f"LangGraph invocation failed: {e}")
+        # Attempt to log partial state if available
+        if isinstance(initial_state, dict):
+             logger.error(f"State at time of error (partial): { {k: v[:100] + '...' if isinstance(v, str) and len(v) > 100 else v for k,v in initial_state.items()} }")
 
-if any(final_state.get('worker_error', [])):
-    print("\nWarning: One or more worker nodes encountered an error during execution.")
+
+    # Print the final result
+    print("\n" + "="*20 + " FINAL ANSWER " + "="*20)
+    if final_state and 'final_answer' in final_state:
+        print(final_state['final_answer'])
+    else:
+        print("No final answer was generated or an error occurred during execution.")
+
+    # Report any worker errors
+    if final_state and any(final_state.get('worker_error', [])):
+        error_indices = [i+1 for i, err in enumerate(final_state['worker_error']) if err]
+        logger.warning(f"\nWarning: Worker node(s) {error_indices} encountered errors during execution.")
+    elif final_state:
+         logger.info("All worker nodes completed without reported errors.")
+
+if __name__ == "__main__":
+    main()

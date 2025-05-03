@@ -12,3 +12,8 @@ langchain-openai
 pypdf
 nltk
 langgraph
+langchain-core
+langchain-community
+tiktoken
+chromadb
+uuid

@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
+import re
+from pypdf import PdfReader
 
 # Load environment variables (e.g., OPENAI_API_KEY)
 load_dotenv() # Looks for .env in the current or parent directories
@@ -22,17 +24,106 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Ensure nltk punkt tokenizer is downloaded (run once)
-def download_nltk_punkt():
+def setup_nltk():
+    """Downloads necessary NLTK data if not already present."""
     try:
         nltk.data.find('tokenizers/punkt')
-        logger.info("NLTK 'punkt' tokenizer already downloaded.")
-    except nltk.downloader.DownloadError:
+        logger.info("NLTK 'punkt' tokenizer data found.")
+    except LookupError:
         logger.info("Downloading NLTK 'punkt' tokenizer data...")
-        nltk.download('punkt')
-        logger.info("NLTK 'punkt' tokenizer downloaded successfully.")
+        nltk.download('punkt', quiet=True)
 
-download_nltk_punkt() # Ensure it's available when module is loaded
+setup_nltk()
 
+def split_into_sentences(text: str) -> List[str]:
+    """Splits text into sentences using NLTK."""
+    return nltk.sent_tokenize(text)
+
+def get_tokenizer(model_name="gpt-4o"):
+    """Gets a tokenizer for token counting."""
+    try:
+        return tiktoken.encoding_for_model(model_name)
+    except KeyError:
+        logger.warning(f"Model {model_name} not found for tiktoken. Using cl100k_base.")
+        return tiktoken.get_encoding("cl100k_base")
+
+def count_tokens(text: str, tokenizer=None) -> int:
+    """Counts tokens using the provided or default tokenizer."""
+    if tokenizer is None:
+        tokenizer = get_tokenizer()
+    return len(tokenizer.encode(text))
+
+def chunk_text_algorithm2(
+    source_text: str,
+    query: str,
+    instruction: str,
+    window_size: int,
+    tokenizer=None,
+    buffer_tokens: int = 100
+) -> List[str]:
+    """
+    Chunk text according to Algorithm 2 from the Chain-of-Agents paper appendix.
+    Args:
+        source_text: The input document text
+        query: The user query
+        instruction: The worker instruction string
+        window_size: The agent's window size (max tokens)
+        tokenizer: A tiktoken encoding instance (if None, will use cl100k_base)
+        buffer_tokens: Optional safety buffer for prompt overhead
+    Returns:
+        List[str]: List of text chunks
+    """
+    if tokenizer is None:
+        tokenizer = get_tokenizer()
+    query_tokens = len(tokenizer.encode(query))
+    instruction_tokens = len(tokenizer.encode(instruction))
+    budget = window_size - query_tokens - instruction_tokens - buffer_tokens
+    if budget <= 0:
+        raise ValueError("Window size too small for query and instruction.")
+    try:
+        sentences = nltk.sent_tokenize(source_text)
+    except Exception as e:
+        logger.error(f"NLTK sentence tokenization failed: {e}. Ensure 'punkt' data is downloaded.")
+        sentences = source_text.split('\n')
+        logger.warning("Falling back to newline splitting for chunking.")
+    chunks = []
+    current_chunk = ""
+    current_tokens = 0
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        sentence_tokens = len(tokenizer.encode(sentence))
+        if current_tokens + sentence_tokens > budget and current_chunk:
+            chunks.append(current_chunk.strip())
+            current_chunk = sentence
+            current_tokens = sentence_tokens
+        else:
+            if current_chunk:
+                current_chunk += " " + sentence
+                current_tokens += sentence_tokens
+            else:
+                current_chunk = sentence
+                current_tokens = sentence_tokens
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    logger.info(f"[Algorithm2] Chunked text into {len(chunks)} chunks (budget={budget})")
+    return chunks
+
+def read_pdf(pdf_path: str) -> str:
+    """Read text content from a PDF file."""
+    try:
+        text = []
+        reader = PdfReader(pdf_path)
+        logger.info(f"Processing PDF with {len(reader.pages)} pages")
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text.append(page_text)
+        return "\n".join(filter(None, text))
+    except Exception as e:
+        logger.error(f"Error reading PDF: {str(e)}")
+        raise
 
 def read_codebase(directory: str, extensions: List[str] = None) -> Dict[str, str]:
     """Reads all files with specified extensions from a directory and its subdirectories.
@@ -76,89 +167,9 @@ def read_codebase(directory: str, extensions: List[str] = None) -> Dict[str, str
     return codebase_content
 
 
-def get_tokenizer(model_name="gpt-4o"):
-    """Gets a tokenizer for token counting."""
-    try:
-        return tiktoken.encoding_for_model(model_name)
-    except KeyError:
-        logger.warning(f"Warning: Model {model_name} not found for tiktoken. Using cl100k_base.")
-        return tiktoken.get_encoding("cl100k_base")
-
 # Initialize tokenizer globally or pass it around
 # Global initialization might be simpler for this script structure
 tokenizer = get_tokenizer()
-
-def count_tokens(text: str) -> int:
-    """Counts tokens using the initialized tokenizer."""
-    return len(tokenizer.encode(text))
-
-# Provided Chunking Algorithm (integrated into utils.py)
-def chunk_text_algorithm2(
-    source_text: str,
-    query: str,
-    instruction: str,
-    window_size: int,
-    # tokenizer=None, # Use the globally defined tokenizer
-    buffer_tokens: int = 100
-) -> List[str]:
-    """
-    Chunk text according to Algorithm 2 from the Chain-of-Agents paper appendix.
-    Args:
-        source_text: The input document text
-        query: The user query
-        instruction: The worker instruction string
-        window_size: The agent's window size (max tokens)
-        buffer_tokens: Optional safety buffer for prompt overhead
-    Returns:
-        List[str]: List of text chunks
-    """
-    # Use the globally defined tokenizer from this module
-    global tokenizer
-    # if tokenizer is None:
-    #     try:
-    #         tokenizer = tiktoken.encoding_for_model("gpt-4o")
-    #     except Exception:
-    #         tokenizer = tiktoken.get_encoding("cl100k_base")
-
-    # Calculate budget
-    query_tokens = count_tokens(query)
-    instruction_tokens = count_tokens(instruction)
-    budget = window_size - query_tokens - instruction_tokens - buffer_tokens
-    if budget <= 0:
-        logger.warning(f"Window size {window_size} too small for query ({query_tokens}) and instruction ({instruction_tokens}). Budget is {budget}. Adjusting budget to 50 tokens.")
-        budget = 50 # Ensure minimum chunk size possible
-
-    # Code-aware chunking by lines
-    lines = source_text.splitlines()
-    chunks = []
-    current_chunk = ""
-    current_tokens = 0
-
-    for line in lines:
-        line = line.rstrip()
-        if not line:
-            continue
-        line_tokens = count_tokens(line)
-        if current_tokens > 0 and (current_tokens + line_tokens) > budget:
-            chunks.append(current_chunk.rstrip())
-            current_chunk = line + "\n"
-            current_tokens = line_tokens
-        elif line_tokens > budget:
-            if current_chunk:
-                chunks.append(current_chunk.rstrip())
-            chunks.append(line)
-            current_chunk = ""
-            current_tokens = 0
-        else:
-            current_chunk += line + "\n"
-            current_tokens += line_tokens + count_tokens("\n")
-
-    if current_chunk.strip():
-        chunks.append(current_chunk.rstrip())
-
-    logger.info(f"[Algorithm2] Chunked text into {len(chunks)} chunks (budget={budget} tokens per chunk)")
-    return chunks
-
 
 # --- Vector DB / RAG Related Utilities --- 
 
