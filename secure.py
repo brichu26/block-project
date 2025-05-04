@@ -10,10 +10,18 @@ from urllib.parse import urlparse
 from collections import defaultdict
 from tqdm import tqdm
 import base64
-GITHUB_TOKEN = ""  # Replace with your GitHub token or leave empty for unauthenticated requests
-HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
 
-# Popularity thresholds 
+
+# Add your GitHub token here
+
+HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
+# Popularity thresholds [-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0] [1,     2,    3,   4,   5,   6,   7,   8,   10]
+THRESHOLDS = [3.0, 2.0, 1.0, 0.5, 0.0, -0.5, -1.0, -1.5]  # 9 cuts → 10 bins
+POINTS      = [10, 8, 7, 6, 5, 4, 3, 2, 1]
+
+THRESHOLDS_COMMIT_DAYS = [3.0, 2.0, 1.0, 0.5, 0.0, -0.5, -1.0, -1.5] 
+POINTS_COMMIT_DAYS = [1, 2, 3, 4, 5, 6, 7, 8, 10]
+"""
 STAR_THRESHOLDS = [10000, 5000, 1000, 500, 100]
 STAR_SCORES = [10, 8, 6, 4, 2]
 FORK_THRESHOLDS = [5000, 1000, 500, 100, 50]
@@ -22,6 +30,23 @@ COMMIT_THRESHOLDS = [30, 90, 180, 365, 730]  # Days since last commit
 COMMIT_SCORES = [10, 8, 6, 4, 2]
 DOWNLOAD_THRESHOLDS = [100000, 50000, 10000, 5000, 1000]
 DOWNLOAD_SCORES = [10, 8, 6, 4, 2]
+"""
+
+MEAN_STARS = 322.10
+MEAN_FORKS = 36.67
+MEAN_DOWNLOADS = 18512.78
+MEAN_COMMIT_DAYS = 44.03
+
+STD_STARS = 3227.83
+STD_FORKS = 363.24
+STD_DOWNLOADS = 83713.48
+STD_COMMIT_DAYS = 35.35
+
+MEDIAN_STARS = 322.10
+MEDIAN_FORKS = 36.67
+MEDIAN_DOWNLOADS = 18512.78
+MEDIAN_COMMIT_DAYS = 44.03
+
 
 class MCPAnalyzer:
     def __init__(self, csv_file):
@@ -342,10 +367,13 @@ class MCPAnalyzer:
         """Check GitHub repository for suspicious code and configuration"""
         if not owner or not repo:
             return {"status": "error", "message": "Missing owner or repo"}
-            
+        print(github_repo) 
+        #split the github_repo by / and get the last element
+        repo_name = github_repo.split('/')[-1]
+        print(repo_name)
         result = {
             "owner": owner,
-            "repo": repo,
+            "repo": repo_name,
             "suspicious_files": [],
             "oauth_implementation": False,
             "direct_api_tokens": False,
@@ -358,6 +386,7 @@ class MCPAnalyzer:
         
         # Clone repository to temporary directory
         temp_dir = f"temp_{owner}_{repo}"
+        print(temp_dir)
         try:
             if os.path.exists(temp_dir):
                 subprocess.run(["rm", "-rf", temp_dir], check=True)
@@ -372,6 +401,7 @@ class MCPAnalyzer:
             
             # Check documentation quality
             readme_quality = self._analyze_readme_quality(github_repo)
+            print(readme_quality)
             result["doc_quality_score"] = readme_quality["score"]
             result["doc_quality_details"] = readme_quality["details"]
             
@@ -450,6 +480,8 @@ class MCPAnalyzer:
             # Additional common patterns
             "documentation.md", "DOCUMENTATION.md", "guide.md", "GUIDE.md", "index.md", "manual.md", "MANUAL.md"
         ]
+        readme_path = None
+        
         if not github_url:
            return None
         print(github_url)
@@ -499,7 +531,6 @@ class MCPAnalyzer:
             encoded_content = readme_data.get('content', '')
             content = base64.b64decode(encoded_content).decode('utf-8') if encoded_content else ''
             print(content)
-                
             # Analyze size and content
             result["details"]["readme_size_bytes"] = len(content)
             
@@ -518,7 +549,7 @@ class MCPAnalyzer:
                 section_strength = 0  # Measure of how strong this section's presence is
                 
                 for pattern in patterns:
-                    matches = re.findall(pattern, content, re.IGNORECASE)
+                    matches = re.findall(pattern, content, re.IGNORECASE) #CONTENT FOUND HERE
                     if matches:
                         matches_found += len(matches)
                         section_strength += min(5, len(matches))  # Cap at 5 to prevent over-counting
@@ -872,6 +903,11 @@ class MCPAnalyzer:
         except requests.RequestException as e:
             print(f"Request failed for {url}: {e}")
             return {}
+        
+    def calculate_z_score(self, value, mean, std):
+        if std == 0:
+            return 0
+        return (value - mean) / std
 
     def calculate_popularity_score(self, owner, repo, stars, downloads):
         repo_url = f"https://api.github.com/repos/{owner}/{repo}"
@@ -887,18 +923,76 @@ class MCPAnalyzer:
         latest_commit_date = None
         last_commit_days = None
         if isinstance(commits_data, list) and commits_data:
+            print("Commits data is a list and is not empty")
             try:
                 latest_commit_date = commits_data[0]["commit"]["committer"]["date"]
-                last_commit_days = (datetime.now(timezone.utc) - datetime.strptime(
-                    latest_commit_date, "%Y-%m-%dT%H:%M:%SZ")).days
-            except (KeyError, ValueError, TypeError):
-                last_commit_days = None 
+                print("Latest commit date is here", latest_commit_date)
+                
+                # Parse the date string into a datetime object with timezone
+                commit_datetime = datetime.strptime(latest_commit_date, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                # Get current time in UTC
+                current_time = datetime.now(timezone.utc)
+                # Calculate the difference
+                time_diff = current_time - commit_datetime
+                # Get the difference in days
+                last_commit_days = time_diff.days
+                
+                print("Parsed commit datetime:", commit_datetime)
+                print("Current time:", current_time)
+                print("Time difference in days:", last_commit_days)
+                
+            except (KeyError, ValueError, TypeError) as e:
+                print(f"Error in date calculation: {str(e)}")
+                last_commit_days = None
 
         # Assign scores — use 0 if data is missing
-        star_score = self.calculate_score(stars, STAR_THRESHOLDS, STAR_SCORES)
-        fork_score = self.calculate_score(forks or 0, FORK_THRESHOLDS, FORK_SCORES)
-        downloads_score = self.calculate_score(downloads, DOWNLOAD_THRESHOLDS, DOWNLOAD_SCORES)
-        commit_score = self.calculate_score(last_commit_days or 9999, COMMIT_THRESHOLDS, COMMIT_SCORES)
+        print("CALCULATION FOR Z SCORES IS HERE")
+        print("Stars are here", stars)
+        print("Forks are here", forks)
+        print("Downloads are here", downloads)
+        print("Last commit days are here", last_commit_days)
+        if stars is None:
+            star_score = 0
+        else:
+            z_score_stars = self.calculate_z_score(stars, MEAN_STARS, STD_STARS)
+            print("Zcore for stars is here", z_score_stars)
+            star_score = self.calculate_score(z_score_stars, THRESHOLDS, POINTS)
+            print("Star score is here", star_score)
+
+        if forks is None:
+            fork_score = 0
+        else:
+            z_score_forks = self.calculate_z_score(forks, MEAN_FORKS, STD_FORKS)
+            print("Zcore for forks is here", z_score_forks)
+            fork_score = self.calculate_score(z_score_forks, THRESHOLDS, POINTS)
+            print("Fork score is here", fork_score)
+        
+        if downloads is None:
+            downloads_score = 0
+        else:
+            z_score_downloads = self.calculate_z_score(downloads, MEAN_DOWNLOADS, STD_DOWNLOADS)
+            print("Zcore for downloads is here", z_score_downloads)
+            downloads_score = self.calculate_score(z_score_downloads, THRESHOLDS, POINTS)
+            print("Downloads score is here", downloads_score)
+
+        if last_commit_days is None:
+            commit_score = 0
+        else:
+            z_score_commit_days = self.calculate_z_score(last_commit_days or 9999, MEAN_COMMIT_DAYS, STD_COMMIT_DAYS)
+            print("Zcore for commit days is here", z_score_commit_days)
+            commit_score = self.calculate_score(z_score_commit_days or 9999, THRESHOLDS_COMMIT_DAYS, POINTS_COMMIT_DAYS)
+            print("Commit score is here", commit_score)
+
+        """z_score_stars = self.calculate_z_score(stars, MEAN_STARS, STD_STARS)
+        z_score_forks = self.calculate_z_score(forks or 0, MEAN_FORKS, STD_FORKS)
+        z_score_downloads = self.calculate_z_score(downloads, MEAN_DOWNLOADS, STD_DOWNLOADS)
+        z_score_commit_days = self.calculate_z_score(last_commit_days or 9999, MEAN_COMMIT_DAYS, STD_COMMIT_DAYS)
+
+
+        star_score = self.calculate_score(z_score_stars, THRESHOLDS, POINTS)
+        fork_score = self.calculate_score(z_score_forks or 0, THRESHOLDS, POINTS)
+        downloads_score = self.calculate_score(z_score_downloads, THRESHOLDS, POINTS)
+        commit_score = self.calculate_score(z_score_commit_days or 9999, THRESHOLDS_COMMIT_DAYS, POINTS_COMMIT_DAYS)"""
 
         # Weighted score
         popularity_score = round(
@@ -922,10 +1016,10 @@ class MCPAnalyzer:
     #adjust weights here 
     def analyze_servers(self):
         """Analyze all MCP servers with progress bar, save to CSV, and keep results in memory."""
-        output_file = "analysis_results.csv"
+        output_file = "official_repos_analysis_results.csv"
         fieldnames = [
             "owner", "repo", "popularity_score", "risk_score",
-            "doc_quality_score", "doc_quality_adjustment", "adjusted_risk_score",
+            "doc_quality_score", "doc_quality_adjustment", "risk_score",
             "risk_category", "description"
         ]
 
@@ -953,14 +1047,19 @@ class MCPAnalyzer:
 
                 for server in tqdm(servers_to_analyze, desc="Analyzing servers", unit="server"):
                     owner = server.get('owner', '').strip()
+                    print(owner)
                     repo = server.get('repo', '').strip()
                     github_url = server.get('server_github_url', '').strip()
-
+                    print("THE GITHUB URL IS HERE", github_url)
+                    #strip the github_url to get the repo name
+                    repo_name = github_url.split('/')[-1]
+                    print("THE REPO NAME IS HERE", repo_name)
+                    
                     stars = int(float(server.get('github_stars', 0) or 0))
                     download_count = server.get('download_count', '0') or '0'
                     downloads = int(download_count) if download_count.isdigit() else 0
                     description = server.get('experimental_ai_generated_description', '')
-
+                    print(github_url)
                     analysis = self.check_github_repo(owner, repo, github_url)
 
                     popularity_data = self.calculate_popularity_score(owner, repo, stars, downloads)
@@ -971,28 +1070,27 @@ class MCPAnalyzer:
                     popularity_score = popularity_data['popularity_score']
                     risk_score = analysis['risk_score']
 
-                    if analysis["oauth_implementation"]:
-                        risk_score -= 5
-                    if analysis["direct_api_tokens"]:
-                        risk_score += 5
+                    # if analysis["oauth_implementation"]:
+                    #     risk_score -= 5
+                    # if analysis["direct_api_tokens"]:
+                    #     risk_score += 5
 
                     doc_quality = analysis.get('doc_quality_score', 0)
                     doc_quality_factor = doc_quality / 10.0
                     doc_quality_adjustment = -3 * doc_quality_factor
-                    risk_score += doc_quality_adjustment
 
-                    adjusted_risk = popularity_score - abs(risk_score / 10)
+                    #risk_score = popularity_score - abs(risk_score / 10)
 
-                    if adjusted_risk > 0.2:
+                    if risk_score > 0.2:
                         risk_category = "MINIMAL"
-                    elif adjusted_risk > 0:
+                    elif risk_score > 0:
                         risk_category = "LOW"
-                    elif adjusted_risk > -0.5:
+                    elif risk_score > -0.5:
                         risk_category = "MEDIUM"
                     else:
                         risk_category = "HIGH"
 
-                    analysis['adjusted_risk_score'] = adjusted_risk
+                    analysis['risk_score'] = risk_score
                     analysis['risk_category'] = risk_category
                     analysis['doc_quality_adjustment'] = doc_quality_adjustment
                     analysis['description'] = description
@@ -1001,12 +1099,12 @@ class MCPAnalyzer:
 
                     row = {
                         "owner": owner,
-                        "repo": repo,
+                        "repo": repo_name,
                         "popularity_score": popularity_score,
                         "risk_score": analysis['risk_score'],
                         "doc_quality_score": doc_quality,
                         "doc_quality_adjustment": doc_quality_adjustment,
-                        "adjusted_risk_score": adjusted_risk,
+                        "risk_score": risk_score,
                         "risk_category": risk_category,
                         "description": description
                     }
@@ -1044,6 +1142,25 @@ class MCPAnalyzer:
         
         print(f"\nTotal servers analyzed: {len(self.results)}")
         
+        # Calculate and print average popularity score
+        total_popularity = sum(r.get('popularity_score', 0) for r in self.results)
+        avg_popularity = total_popularity / max(1, len(self.results))
+        print(f"\nAverage popularity score: {avg_popularity:.2f}/5")
+        
+        # Print popularity score distribution
+        popularity_ranges = {
+            'Excellent (4-5)': sum(1 for r in self.results if 4 <= r.get('popularity_score', 0) <= 5),
+            'Good (3-3.9)': sum(1 for r in self.results if 3 <= r.get('popularity_score', 0) < 4),
+            'Average (2-2.9)': sum(1 for r in self.results if 2 <= r.get('popularity_score', 0) < 3),
+            'Below Average (1-1.9)': sum(1 for r in self.results if 1 <= r.get('popularity_score', 0) < 2),
+            'Poor (0-0.9)': sum(1 for r in self.results if r.get('popularity_score', 0) < 1)
+        }
+        
+        print("\nPopularity score distribution:")
+        for range_name, count in popularity_ranges.items():
+            percentage = (count / len(self.results)) * 100 if self.results else 0
+            print(f"  - {range_name}: {count} servers ({percentage:.1f}%)")
+        
         # Print documentation quality summary
         total_doc_score = sum(r.get('doc_quality_score', 0) for r in self.results)
         avg_doc_score = total_doc_score / max(1, len(self.results))
@@ -1059,11 +1176,13 @@ class MCPAnalyzer:
         
         print("Documentation quality breakdown:")
         for quality, count in doc_quality_counts.items():
-            print(f"  - {quality}: {count} servers")
+            percentage = (count / len(self.results)) * 100 if self.results else 0
+            print(f"  - {quality}: {count} servers ({percentage:.1f}%)")
         
         for category in ['HIGH', 'MEDIUM', 'LOW', 'MINIMAL']:
             servers = risk_categories.get(category, [])
-            print(f"\n{category} RISK: {len(servers)} servers")
+            percentage = (len(servers) / len(self.results)) * 100 if self.results else 0
+            print(f"\n{category} RISK: {len(servers)} servers ({percentage:.1f}%)")
             for owner, repo in servers:
                 print(f"  - {owner}/{repo}")
                 
@@ -1082,7 +1201,7 @@ class MCPAnalyzer:
             'owner', 'repo', 'github_stars', 'download_count', 
             'experimental_ai_generated_description', 
             # Risk assessment
-            'risk_category', 'adjusted_risk_score', 'popularity_score', 
+            'risk_category', 'risk_score', 'popularity_score', 
             # Documentation quality metrics
             'doc_quality_score', 'doc_quality_adjustment', 'readme_found',
             'has_installation_docs', 'has_usage_docs', 'has_api_reference', 
@@ -1111,7 +1230,7 @@ class MCPAnalyzer:
                     'download_count': result.get('download_count', 0),
                     'experimental_ai_generated_description': result.get('description', ''),
                     'risk_category': result.get('risk_category', 'UNKNOWN'),
-                    'adjusted_risk_score': round(result.get('adjusted_risk_score', 0), 2),
+                    'risk_score': round(result.get('risk_score', 0), 2),
                     'popularity_score': round(result.get('popularity_score', 0), 2),
                     'doc_quality_score': result.get('doc_quality_score', 0),
                     'doc_quality_adjustment': round(result.get('doc_quality_adjustment', 0), 2),
@@ -1181,16 +1300,20 @@ class MCPAnalyzer:
 
 if __name__ == "__main__":
     #csv_file = os.path.join(os.getcwd(), "data", "sorted_data.csv")
-    csv_file = os.path.join(os.getcwd(), "sorted_data_by_stars.csv")
+    
+    csv_file = os.path.join(os.getcwd(), "official_repos_with_metadata.csv")  # Changed to match the output from main (2).py
     
     analyzer = MCPAnalyzer(csv_file)
+    
     if analyzer.load_servers():
         analyzer.analyze_servers()
+        print("ANALYZER DONE", analyzer)
         # Generate both JSON and CSV reports
-        analyzer.generate_report()
-        analyzer._print_summary()
-        csv_output = analyzer.generate_csv_report()
-        #doc_output = analyzer.generate_doc_quality_report()
-        print(f"\nUpdated CSV file with security analysis: {csv_output}")
+        analyzer.generate_report() #bu commentlendi
+        analyzer._print_summary() #bu commentlendi
+        csv_output = analyzer.generate_csv_report() #bu commentlendi
+        doc_output = analyzer.generate_doc_quality_report()
+        print(f"\nUpdated CSV file with security analysis: {csv_output}") #bu commentlendi"""
+        #analyzer._analyze_readme_quality()
         #print(f"Documentation quality report: {doc_output}")
 
