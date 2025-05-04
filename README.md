@@ -24,7 +24,7 @@ This repository contains a collection of tools for implementing the Model Contex
 
 - **summarize_conversation.py**: Script for summarizing conversation logs using various techniques.
 
-### Model Comparison Pipeline (MCP)
+### Model Context Protocol (MCP)
 
 - **mcp_security_eval.py**: Evaluates models based on security criteria.
 
@@ -34,7 +34,7 @@ This repository contains a collection of tools for implementing the Model Contex
 
 - **mcp_popularity_eval.py**: Analyzes model popularity and usage statistics.
 
-- **mcp_scoring.py**: Core scoring system for the model comparison pipeline.
+- **mcp_scoring.py**: Core scoring system for the MCP.
 
 ## Setup Instructions
 
@@ -100,7 +100,7 @@ Evaluates how well different summarization strategies retain key information. Im
 ### Context Window Manager
 Implements various strategies for managing context windows for LLMs according to the Model Context Protocol (MCP), including prioritization, truncation, and summarization approaches.
 
-### Model Comparison Pipeline
+### Model Context Protocol
 A comprehensive framework for evaluating and comparing different language models across security, documentation quality, performance, and popularity metrics.
 
 ## Note
