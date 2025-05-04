@@ -16,6 +16,13 @@ from langchain_core.documents import Document
 import re
 from pypdf import PdfReader
 
+# --- Constants ---
+DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
+DEFAULT_TOKENIZER_MODEL = "gpt-4o"
+DEFAULT_CHROMA_PERSIST_DIR = "./chroma_db"
+DEFAULT_CHUNK_BUFFER_TOKENS = 100
+# -----------------
+
 # Load environment variables (e.g., OPENAI_API_KEY)
 load_dotenv() # Looks for .env in the current or parent directories
 
@@ -39,7 +46,7 @@ def split_into_sentences(text: str) -> List[str]:
     """Splits text into sentences using NLTK."""
     return nltk.sent_tokenize(text)
 
-def get_tokenizer(model_name="gpt-4o"):
+def get_tokenizer(model_name=DEFAULT_TOKENIZER_MODEL):
     """Gets a tokenizer for token counting."""
     try:
         return tiktoken.encoding_for_model(model_name)
@@ -59,7 +66,7 @@ def chunk_text_algorithm2(
     instruction: str,
     window_size: int,
     tokenizer=None,
-    buffer_tokens: int = 100
+    buffer_tokens: int = DEFAULT_CHUNK_BUFFER_TOKENS
 ) -> List[str]:
     """
     Chunk text according to Algorithm 2 from the Chain-of-Agents paper appendix.
@@ -166,66 +173,65 @@ def read_codebase(directory: str, extensions: List[str] = None) -> Dict[str, str
     logger.info(f"Finished reading codebase. Read {len(codebase_content)} files. Total length: {total_chars} characters.")
     return codebase_content
 
-
-# Initialize tokenizer globally or pass it around
-# Global initialization might be simpler for this script structure
-tokenizer = get_tokenizer()
-
 # --- Vector DB / RAG Related Utilities --- 
 
-# Global variable for embeddings
-embeddings = None
+def initialize_embeddings(model_name=DEFAULT_EMBEDDING_MODEL):
+    """Initializes the OpenAI embeddings model.
 
-def initialize_embeddings(model_name="text-embedding-ada-002"):
-    """Initializes the OpenAI embeddings model."""
-    global embeddings
-    try:
-        # Ensure API key is available
-        if not os.getenv("OPENAI_API_KEY"):
-            raise ValueError("OPENAI_API_KEY not found in environment variables. Please ensure it's set in your .env file.")
-        embeddings = OpenAIEmbeddings(model=model_name)
-        logger.info(f"Initialized OpenAI Embeddings with model: {model_name}")
-        return embeddings
-    except Exception as e:
-        logger.error(f"Failed to initialize OpenAI Embeddings: {e}")
-        raise
+    Args:
+        model_name (str): The name of the OpenAI embedding model to use.
 
-def initialize_vectorstore(persist_directory: str = "./chroma_db") -> Chroma:
-    """Initializes the Chroma vector store, loading if it exists.
-    
     Returns:
-        Chroma: The initialized vector store instance.
+        OpenAIEmbeddings: The initialized embeddings instance, or None if API key is missing.
     """
-    local_vectorstore = None # Use a local variable
-    if embeddings is None:
-        initialize_embeddings() # Ensure embeddings are initialized first
-    
-    # Check if persist_directory exists
+    # Check if API key is available (Langchain checks this internally, but explicit check is clearer)
+    if not os.getenv("OPENAI_API_KEY"):
+        logger.error("OPENAI_API_KEY environment variable not set.")
+        return None
+    try:
+        logger.info(f"Initializing OpenAI embeddings model: {model_name}")
+        embeddings_instance = OpenAIEmbeddings(model=model_name)
+        logger.info("Embeddings model initialized successfully.")
+        return embeddings_instance
+    except Exception as e:
+        logger.error(f"Failed to initialize OpenAI embeddings: {e}")
+        return None
+
+def initialize_vectorstore(embeddings_instance: OpenAIEmbeddings, persist_directory: str = DEFAULT_CHROMA_PERSIST_DIR):
+    """Initializes the Chroma vector store, loading if it exists.
+
+    Args:
+        embeddings_instance (OpenAIEmbeddings): The initialized embeddings model.
+        persist_directory (str): The directory to persist the vector store.
+
+    Returns:
+        Chroma: The initialized vector store instance, or None on failure.
+    """
+    if not embeddings_instance:
+        logger.error("Cannot initialize vectorstore without a valid embeddings instance.")
+        return None
+
+    logger.info(f"Initializing Chroma vector store in directory: {persist_directory}")
+    # Check if the directory exists
     if os.path.exists(persist_directory):
         logger.info(f"Loading existing Chroma vector store from: {persist_directory}")
-        local_vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+        local_vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings_instance)
     else:
         logger.info(f"Creating new Chroma vector store at: {persist_directory}")
         # Initialize empty and it will be saved on first add with persist_directory set
-        local_vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
-        # We need to add at least one document for the directory to be created and persisted correctly initially
-        # Add a dummy doc to ensure persistence directory is created immediately
-        # vectorstore.add_documents([Document(page_content="Initial document", metadata={"dummy": True})])
-        # vectorstore.delete(ids=vectorstore.get(where={"dummy": True})['ids']) # Clean up dummy - maybe better to just let add_chunks handle first save?
-        # Let's rely on the first call to add_chunks_to_vectorstore to create and persist.
+        local_vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings_instance)
         
-    logger.info(f"Chroma vector store initialized. Collection name: {local_vectorstore._collection.name}")
+    logger.info(f"Chroma vector store initialized/loaded. Collection name: {local_vectorstore._collection.name}")
     return local_vectorstore # Return the created instance
 
-def add_chunks_to_vectorstore(chunks: List[str], vectorstore_instance: Chroma, file_path: str = "N/A", initial_add: bool = False) -> List[str]:
+def add_chunks_to_vectorstore(chunks: List[str], vectorstore_instance: Chroma, file_path: str = "N/A") -> List[str]:
     """Adds text chunks to the specified vectorstore instance.
-    
+
     Args:
         chunks: List of text chunks to add.
         vectorstore_instance: The initialized Chroma instance.
         file_path: The original file path the chunks belong to.
-        initial_add: Flag indicating if this is the first add operation (not currently used).
-        
+
     Returns:
         List of generated chunk IDs.
     """
@@ -274,26 +280,3 @@ def merge_worker_outputs(existing, updates):
 
 def escape_curly_braces(text: str) -> str:
      return text.replace('{', '{{').replace('}', '}}')
-# Example Usage (Can be uncommented for testing)
-# if __name__ == "__main__":
-#     print("Testing utils...")
-#     test_folder = "../test_codebase" # Assuming utils.py is in masRAG
-#     code_text = read_codebase(test_folder)
-#     print(f"Read codebase text (first 500 chars):\n{code_text[:500]}...")
-
-#     test_query = "Describe the main function"
-#     test_instruction = "Analyze the provided code snippet"
-#     test_window_size = 100 # Use a small window for testing chunking
-
-#     chunks = chunk_text_algorithm2(
-#         source_text=code_text,
-#         query=test_query,
-#         instruction=test_instruction,
-#         window_size=test_window_size
-#     )
-
-#     print(f"\nGenerated {len(chunks)} chunks with window size {test_window_size}:")
-#     for i, chunk in enumerate(chunks):
-#         print(f"--- Chunk {i+1} (Tokens: {count_tokens(chunk)}) ---")
-#         print(chunk)
-#         print("---")
