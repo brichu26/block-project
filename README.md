@@ -1,18 +1,18 @@
-# Context Management and Evaluation Toolkit
+# Model Context Protocol and Evaluation Toolkit
 
-This repository contains a collection of tools for context management, conversation summarization, and model comparison/evaluation pipelines.
+This repository contains a collection of tools for implementing the Model Context Protocol (MCP), conversation summarization, and model comparison/evaluation pipelines.
 
 ## Project Structure
 
-### Context Management
+### Context Management (MCP Implementation)
 
-- **needle_in_haystack_evaluator.py**: Evaluates how well different summarization strategies preserve critical information within texts. Uses OpenAI API to generate summaries and evaluate them based on retention of key information.
+- **needle_in_haystack_evaluator.py**: Evaluates how well different summarization strategies preserve critical information within texts using the Model Context Protocol. Uses OpenAI API to generate summaries and evaluate them based on retention of key information.
 
-- **context_management.py**: Core implementation of context management strategies for handling large text contexts in LLM applications.
+- **context_management.py**: Core implementation of Model Context Protocol strategies for handling large text contexts in LLM applications.
 
-- **context_visualizer.py**: Visualization tools for analyzing context windows, displaying how content is prioritized and managed.
+- **context_visualizer.py**: Visualization tools for analyzing context windows, displaying how content is prioritized and managed within the MCP framework.
 
-- **context_window_manager.py**: Manages context windows for LLM inputs, implementing various strategies for context prioritization.
+- **context_window_manager.py**: Manages context windows for LLM inputs, implementing various strategies for context prioritization according to MCP principles.
 
 - **summary_evaluator_app.py**: Application for evaluating the quality of different summarization approaches.
 
@@ -86,7 +86,7 @@ cd conversation_summarizer
 python summarize_conversation.py
 ```
 
-#### Model Comparison Pipeline
+#### Model Context Protocol
 ```
 cd mcp
 python mcp_scoring.py
@@ -98,7 +98,7 @@ python mcp_scoring.py
 Evaluates how well different summarization strategies retain key information. Implements a scoring system that awards full points for exact matches and partial points for context-preserving summaries.
 
 ### Context Window Manager
-Implements various strategies for managing context windows for LLMs, including prioritization, truncation, and summarization approaches.
+Implements various strategies for managing context windows for LLMs according to the Model Context Protocol (MCP), including prioritization, truncation, and summarization approaches.
 
 ### Model Comparison Pipeline
 A comprehensive framework for evaluating and comparing different language models across security, documentation quality, performance, and popularity metrics.
