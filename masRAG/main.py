@@ -36,7 +36,7 @@ INITIAL_CHUNK_QUERY = "General Code Indexing" # Placeholder query for chunking b
 INITIAL_CHUNK_INSTRUCTION = "Chunk the following code text for retrieval."
 
 # Sample User Query
-USER_QUERY = "Please implement a new feature; add a new button while in game to forfeit, effectively ending the game upon clicking." # Example query
+USER_QUERY = "Please implement a new feature; add a new button while in game to forfeit, effectively ending the game upon clicking. Code the forfeit button." # Example query
 # USER_QUERY = "What does the utility function in file2.py do?" # Example query 2
 
 # --- Constants --- 

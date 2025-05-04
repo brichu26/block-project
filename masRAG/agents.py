@@ -196,7 +196,7 @@ def manager_after_workers_node_function(state: AgentState) -> Dict[str, Any]:
     analysis_parts = []
     has_errors = False
 
-    from masRAG.escape_utils import escape_curly_braces
+    from masRAG.utils import escape_curly_braces
     for worker_name, result in worker_outputs.items():
         if result.get('status') == 'success':
             output_text = result.get('output', '')

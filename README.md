@@ -70,22 +70,11 @@ Make sure your virtual environment is activated (`source venv/bin/activate` or `
         - `--worker_model`: (Optional) LLM model for worker agents (default: `gpt-4o`)
         - `--manager_model`: (Optional) LLM model for manager agent (default: `gpt-4o`)
         - `--chunk_size`: (Optional) Chunk size for splitting the document (default: 8000)
-    *   **Note:** The old `run.sh` bash script is no longer needed. All logic is now in `main.py`.
-    *   All imports in the codebase have been updated for the flat structure (e.g., `from utils import ...`).
 
 3.  **masRAG:**
+    *   Edit main.py to change the USER_QUERY variable to your desired query.
+    *   Edit agents.py to change the CODEBASE_PATH variable to your desired codebase path.
     *   Run the main script from the root directory (`block-project/`):
         ```bash
-        python masRAG/main.py --query "<your_query>"
+        python -m masRAG.main
         ```
-    *   *(Check `masRAG/main.py --help` for additional arguments and options.)*
-
-**General Notes:**
-- Make sure all dependencies are installed from the project root:
-    ```bash
-    pip install -r requirements.txt
-    ```
-- The `.env` file should contain your OpenAI API key:
-    ```env
-    OPENAI_API_KEY=sk-...
-    ```

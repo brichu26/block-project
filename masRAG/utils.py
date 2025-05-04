@@ -262,8 +262,18 @@ def add_chunks_to_vectorstore(chunks: List[str], vectorstore_instance: Chroma, f
 
     return chunk_ids
 
+def merge_worker_outputs(existing, updates):
+     result = dict(existing)
+     if isinstance(updates, list):
+         for update in updates:
+             if isinstance(update, dict):
+                 result.update(update)
+     elif isinstance(updates, dict):
+         result.update(updates)
+     return result
 
-
+def escape_curly_braces(text: str) -> str:
+     return text.replace('{', '{{').replace('}', '}}')
 # Example Usage (Can be uncommented for testing)
 # if __name__ == "__main__":
 #     print("Testing utils...")

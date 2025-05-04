@@ -4,7 +4,7 @@ import operator # Import operator
 from typing import Dict, Any, Optional, Annotated, List
 from langgraph.graph.message import AnyMessage, add_messages
 from langchain_community.vectorstores import Chroma # Import Chroma
-from masRAG.merge_utils import merge_worker_outputs
+from masRAG.utils import merge_worker_outputs
 
 # Using operator.add is often simpler and standard for merging dictionaries
 # from parallel branches writing to the same dictionary key.
