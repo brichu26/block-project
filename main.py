@@ -320,8 +320,8 @@ import pandas as pd
 
 # Load CSVs
 source_df = pd.read_csv('pulsemcp_servers_all.csv')
-#target_df = pd.read_csv('official_repos_name.csv')
-target_df = pd.read_csv('reference_mcp.csv')
+target_df = pd.read_csv('official_repos_name.csv')
+#target_df = pd.read_csv('reference_mcp.csv')
 
 
 # Drop columns with no name or unnamed columns
@@ -344,7 +344,7 @@ merged_df = pd.merge(
 merged_df = merged_df.loc[:, merged_df.columns.str.strip().astype(bool)]
 
 # Save
-merged_df.to_csv('reference_repos_with_metadata.csv', index=False)
+merged_df.to_csv('official_repos_with_metadata.csv', index=False)
 
 
 

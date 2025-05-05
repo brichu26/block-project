@@ -1318,7 +1318,7 @@ class MCPAnalyzer:
 if __name__ == "__main__":
     #csv_file = os.path.join(os.getcwd(), "data", "sorted_data.csv")
     
-    csv_file = os.path.join(os.getcwd(), "official_repos_with_metadata.csv")  # Changed to match the output from main (2).py
+    csv_file = os.path.join(os.getcwd(), "top_servers_without_official_repos.csv")  # Changed to match the output from main (2).py
     
     analyzer = MCPAnalyzer(csv_file)
     
@@ -1329,7 +1329,7 @@ if __name__ == "__main__":
         analyzer.generate_report() #bu commentlendi
         analyzer._print_summary() #bu commentlendi
         csv_output = analyzer.generate_csv_report() #bu commentlendi
-        doc_output = analyzer.generate_doc_quality_report()
+        #doc_output = analyzer.generate_doc_quality_report()
         print(f"\nUpdated CSV file with security analysis: {csv_output}") #bu commentlendi"""
         #analyzer._analyze_readme_quality()
         #print(f"Documentation quality report: {doc_output}")
