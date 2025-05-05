@@ -56,14 +56,14 @@ class MCPAnalyzer:
         self.suspicious_patterns = [
             r"eval\s*\(",
             r"exec\s*\(",
-            r"base64\.b64decode",
+            r"base64\\.b64decode",
             r"send.*data",
             r"collect.*data",
             r"tracking",
             r"fetch\s*\(",
-            r"axios\.post",
-            r"request\.post",
-            r"\.send\(",
+            r"axios\\.post",
+            r"request\\.post",
+            r"\\.send\(",
             r"store_all_queries",
             r"log_all",
         ]
@@ -92,8 +92,8 @@ class MCPAnalyzer:
                 r'apt(?:\-get)? install',
                 r'yarn add',
                 r'composer require',
-                r'requirements\.txt',
-                r'package\.json'
+                r'requirements\\.txt',
+                r'package\\.json'
             ],
             
             # Usage examples
@@ -118,11 +118,11 @@ class MCPAnalyzer:
                 r'options', 
                 r'parameters',
                 r'environment variables?',
-                r'\.env',
+                r'\\.env',
                 r'(?:json|yaml|xml|ini) config',
                 r'customiz(?:e|ing|ation)',
                 r'preferences',
-                r'\.config\.',
+                r'\\.config\\.',
                 r'flags',
                 r'arguments',
                 r'optional inputs'
@@ -213,7 +213,7 @@ class MCPAnalyzer:
                 r'diagram',
                 r'image',
                 r'figure',
-                r'\.(?:png|jpe?g|gif|svg)',
+                r'\\.(?:png|jpe?g|gif|svg)',
                 r'visual',
                 r'ui',
                 r'interface preview'
@@ -378,8 +378,9 @@ class MCPAnalyzer:
             "oauth_implementation": False,
             "direct_api_tokens": False,
             "outbound_connections": [],
-            "risk_score": 0,
-            "risk_factors": [],
+            "security_score": 0, 
+            "config_risk_factors": [],  
+            "outbound_risk_factors": [],  
             "doc_quality_score": 0,
             "doc_quality_details": {}
         }
@@ -420,18 +421,17 @@ class MCPAnalyzer:
                 if file_analysis["suspicious"]:
                     result["suspicious_files"].append(file_analysis)
                     result["outbound_connections"].extend(file_analysis.get("outbound_connections", []))
-                    result["risk_score"] += file_analysis["risk_score"]
-                    result["risk_factors"].extend(file_analysis.get("risk_factors", []))
+                    result["config_risk_factors"].extend(file_analysis.get("risk_factors", []))
             
             # Check for network-related code
             network_analysis = self._analyze_network_code(temp_dir)
             result["outbound_connections"].extend(network_analysis.get("outbound_connections", []))
-            result["risk_score"] += network_analysis["risk_score"]
-            result["risk_factors"].extend(network_analysis.get("risk_factors", []))
-            
+            result["outbound_risk_factors"].extend(network_analysis.get("risk_factors", []))
+        
             # Remove duplicates
             result["outbound_connections"] = list(set(result["outbound_connections"]))
-            result["risk_factors"] = list(set(result["risk_factors"]))
+            result["config_risk_factors"] = list(set(result["config_risk_factors"]))
+            result["outbound_risk_factors"] = list(set(result["outbound_risk_factors"]))
             
         except Exception as e:
             result["status"] = "error"
@@ -766,7 +766,7 @@ class MCPAnalyzer:
             "suspicious": False,
             "found_patterns": [],
             "outbound_connections": [],
-            "risk_score": 0,
+            "security_score": 0,
             "risk_factors": []
         }
         
@@ -780,7 +780,7 @@ class MCPAnalyzer:
                 if matches:
                     result["suspicious"] = True
                     result["found_patterns"].append(pattern)
-                    result["risk_score"] += len(matches)
+                    result["security_score"] += len(matches)
                     result["risk_factors"].append(f"Found pattern: {pattern}")
             
             # Check for URLs and endpoints
@@ -794,7 +794,7 @@ class MCPAnalyzer:
                     if suspicious in domain:
                         result["suspicious"] = True
                         result["outbound_connections"].append(url)
-                        result["risk_score"] += 2
+                        result["security_score"] += 2
                         result["risk_factors"].append(f"Suspicious domain: {domain}")
                         break
                 
@@ -809,19 +809,18 @@ class MCPAnalyzer:
                 r"store.*queries",
                 r"log.*queries",
                 r"POST\s+https?://",
-                r"\.post\s*\(",
+                r"\\.post\s*\(",
             ]
             
             for pattern in data_exfil_patterns:
                 if re.search(pattern, content, re.IGNORECASE):
                     result["suspicious"] = True
-                    result["risk_score"] += 3
+                    result["security_score"] += 3
                     result["risk_factors"].append(f"Potential data exfiltration: {pattern}")
             
-            # Check for obfuscated code
             obfuscation_patterns = [
                 r"eval\s*\(.*\)",
-                r"base64\.b64decode\(",
+                r"base64\\.b64decode\(",
                 r"exec\s*\(",
                 r"atob\s*\(",
                 r"decodeURIComponent\s*\(",
@@ -830,7 +829,7 @@ class MCPAnalyzer:
             for pattern in obfuscation_patterns:
                 if re.search(pattern, content, re.IGNORECASE):
                     result["suspicious"] = True
-                    result["risk_score"] += 5
+                    result["security_score"] += 5
                     result["risk_factors"].append(f"Obfuscated code: {pattern}")
                     
         except Exception as e:
@@ -842,20 +841,20 @@ class MCPAnalyzer:
         """Analyze code files for network-related operations"""
         result = {
             "outbound_connections": [],
-            "risk_score": 0,
+            "security_score": 0,
             "risk_factors": []
         }
         
         # Find files with potential network code
         network_patterns = [
-            r"requests\.post",
-            r"requests\.get",
-            r"axios\.",
+            r"requests\\.post",
+            r"requests\\.get",
+            r"axios\\.",
             r"fetch\(",
-            r"http\.",
-            r"\.send\(",
+            r"http\\.",
+            r"\\.send\(",
             r"WebSocket",
-            r"\.emit\(",
+            r"\\.emit\(",
         ]
         
         for pattern in network_patterns:
@@ -878,7 +877,7 @@ class MCPAnalyzer:
                             for suspicious in self.suspicious_domains:
                                 if suspicious in domain:
                                     result["outbound_connections"].append(url)
-                                    result["risk_score"] += 2
+                                    result["security_score"] += 2
                                     result["risk_factors"].append(f"Suspicious network connection to {domain}")
                                     break
                             
@@ -1013,13 +1012,29 @@ class MCPAnalyzer:
             "popularity_score": popularity_score
         }
 
-    #adjust weights here 
+    def calculate_security_score(self, result):
+        """Calculate the comprehensive security score for a repository."""
+        # Extract relevant data from the result dictionary
+        oauth_implementation = 0 if result.get("oauth_implementation", False) else 1
+        direct_api_tokens = 1 if result.get("direct_api_tokens", False) else 0
+        config_security_score = min(1, len(result.get("config_risk_factors", [])))
+        outbound_security_score = min(1, (len(result.get("outbound_connections", [])) + len(result.get("outbound_risk_factors", []))))
+
+        # Calculate the final security score using weighted components
+        final_security_score = (
+            oauth_implementation  * 0.20 +
+            direct_api_tokens * 0.20 +
+            config_security_score * 0.3 +
+            outbound_security_score * 0.3
+        )
+        return round(final_security_score, 2)
+
     def analyze_servers(self):
         """Analyze all MCP servers with progress bar, save to CSV, and keep results in memory."""
         output_file = "official_repos_analysis_results.csv"
         fieldnames = [
-            "owner", "repo", "popularity_score", "risk_score",
-            "doc_quality_score", "doc_quality_adjustment", "risk_score",
+            "owner", "repo", "popularity_score", "security_score",
+            "doc_quality_score", "doc_quality_adjustment", "total_risk_factor",
             "risk_category", "description"
         ]
 
@@ -1060,40 +1075,40 @@ class MCPAnalyzer:
                     downloads = int(download_count) if download_count.isdigit() else 0
                     description = server.get('experimental_ai_generated_description', '')
                     print(github_url)
-                    analysis = self.check_github_repo(owner, repo, github_url)
 
+                    analysis = self.check_github_repo(owner, repo, github_url)
                     popularity_data = self.calculate_popularity_score(owner, repo, stars, downloads)
                     if popularity_data:
                         analysis.update(popularity_data)
                     analysis['github_stars'] = stars
                     analysis['download_count'] = downloads
                     popularity_score = popularity_data['popularity_score']
-                    risk_score = analysis['risk_score']
-
-                    # if analysis["oauth_implementation"]:
-                    #     risk_score -= 5
-                    # if analysis["direct_api_tokens"]:
-                    #     risk_score += 5
 
                     doc_quality = analysis.get('doc_quality_score', 0)
                     doc_quality_factor = doc_quality / 10.0
                     doc_quality_adjustment = -3 * doc_quality_factor
 
-                    #risk_score = popularity_score - abs(risk_score / 10)
+                    oauth_implementation = analysis.get('oauth_implementation', False)
+                    direct_api_tokens = analysis.get('direct_api_tokens', False)
+                    # Calculate security score
+                    security_score =  self.calculate_security_score(analysis) 
 
-                    if risk_score > 0.2:
+                    if security_score <= 0.25:
                         risk_category = "MINIMAL"
-                    elif risk_score > 0:
+                    elif security_score <= 0.5:
                         risk_category = "LOW"
-                    elif risk_score > -0.5:
+                    elif security_score <= 0.75:
                         risk_category = "MEDIUM"
                     else:
                         risk_category = "HIGH"
 
-                    analysis['risk_score'] = risk_score
+                    analysis['security_score'] = security_score
                     analysis['risk_category'] = risk_category
                     analysis['doc_quality_adjustment'] = doc_quality_adjustment
+                    analysis['oauth_implementation'] = oauth_implementation
+                    analysis['direct_api_tokens'] = direct_api_tokens
                     analysis['description'] = description
+                    total_risk_factor = analysis["outbound_risk_factors"] + analysis["config_risk_factors"]
 
                     self.results.append(analysis)
 
@@ -1101,10 +1116,10 @@ class MCPAnalyzer:
                         "owner": owner,
                         "repo": repo_name,
                         "popularity_score": popularity_score,
-                        "risk_score": analysis['risk_score'],
+                        "security_score": security_score,
                         "doc_quality_score": doc_quality,
                         "doc_quality_adjustment": doc_quality_adjustment,
-                        "risk_score": risk_score,
+                        "total_risk_factor": total_risk_factor,
                         "risk_category": risk_category,
                         "description": description
                     }
@@ -1201,7 +1216,7 @@ class MCPAnalyzer:
             'owner', 'repo', 'github_stars', 'download_count', 
             'experimental_ai_generated_description', 
             # Risk assessment
-            'risk_category', 'risk_score', 'popularity_score', 
+            'risk_category', 'security_score', 'popularity_score', 
             # Documentation quality metrics
             'doc_quality_score', 'doc_quality_adjustment', 'readme_found',
             'has_installation_docs', 'has_usage_docs', 'has_api_reference', 
@@ -1211,7 +1226,8 @@ class MCPAnalyzer:
             'readability_score', 'missing_sections',
             # Security indicators
             'oauth_implementation', 'direct_api_tokens', 
-            'main_risk_factors', 'outbound_connections'
+            'config_risk_factors', 'outbound_risk_factors', 
+            'outbound_connections'
         ]
         
         with open(output_file, 'w', newline='', encoding='utf-8') as f:
@@ -1230,14 +1246,15 @@ class MCPAnalyzer:
                     'download_count': result.get('download_count', 0),
                     'experimental_ai_generated_description': result.get('description', ''),
                     'risk_category': result.get('risk_category', 'UNKNOWN'),
-                    'risk_score': round(result.get('risk_score', 0), 2),
+                    'security_score': round(result.get('security_score', 0), 2),
                     'popularity_score': round(result.get('popularity_score', 0), 2),
                     'doc_quality_score': result.get('doc_quality_score', 0),
                     'doc_quality_adjustment': round(result.get('doc_quality_adjustment', 0), 2),
                     'oauth_implementation': 'Yes' if result.get('oauth_implementation', False) else 'No',
                     'direct_api_tokens': 'Yes' if result.get('direct_api_tokens', False) else 'No',
-                    'main_risk_factors': '; '.join(result.get('risk_factors', [])[:5]),  # Top 5 risk factors
-                    'outbound_connections': '; '.join(result.get('outbound_connections', [])[:5]),  # Top 5 connections
+                    'config_risk_factors': '; '.join(result.get('config_risk_factors', [])),  
+                    'outbound_risk_factors': '; '.join(result.get('outbound_risk_factors', [])),  
+                    'outbound_connections': '; '.join(result.get('outbound_connections', [])),  
                 }
                 
                 # Add detailed documentation metrics
