@@ -82,9 +82,7 @@ if __name__ == "__main__":
     )
 
     # Write the updated DataFrame to a new CSV file
-    df.to_csv('official_repos_mcp_analysis_with_overall_score.csv', index=False)
-
-    print("New CSV file created: official_repos_mcp_analysis_with_overall_score.csv")
+    df.to_csv('final_top_server_without_official.csv', index=False)
     print("Average Overall score:" + str(df['overall_score'].mean()))
 
 
