@@ -72,7 +72,7 @@ if __name__ == "__main__":
     #     output_path="missing.csv",
     # )
 
-    df = pd.read_csv('mcp_analysis.csv')
+    df = pd.read_csv('random_unofficial_repos_mcp_analysis.csv')
 
     # Calculate the overall score
     df['overall_score'] = (
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     )
 
     # Write the updated DataFrame to a new CSV file
-    df.to_csv('final_top_server_without_official.csv', index=False)
+    df.to_csv('random_unofficial_repos_mcp_analysis_with_overall.csv', index=False)
     print("Average Overall score:" + str(df['overall_score'].mean()))
 
 
