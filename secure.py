@@ -1081,7 +1081,7 @@ class MCPAnalyzer:
                     if popularity_data:
                         analysis.update(popularity_data)
                     analysis['github_stars'] = stars
-                    analysis['download_count'] = downloads
+                    analysis['download_count'] = download_count
                     popularity_score = popularity_data['popularity_score']
 
                     doc_quality = analysis.get('doc_quality_score', 0)
@@ -1318,7 +1318,7 @@ class MCPAnalyzer:
 if __name__ == "__main__":
     #csv_file = os.path.join(os.getcwd(), "data", "sorted_data.csv")
     
-    csv_file = os.path.join(os.getcwd(), "top_servers_without_official_repos.csv")  # Changed to match the output from main (2).py
+    csv_file = os.path.join(os.getcwd(), "INPUT-top_servers_without_official_repos.csv")  # Changed to match the output from main (2).py
     
     analyzer = MCPAnalyzer(csv_file)
     
