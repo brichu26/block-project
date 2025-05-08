@@ -9,9 +9,8 @@ tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-cnn")
 
 
 def extract_memory_keywords(text, num_points=3):
-    """
-    Extracts key phrases (not full sentences) to serve as memory anchors.
-    """
+    # Extracts key phrases (not full sentences) to serve as memory anchors.
+
     sentences = split_sentences(text)
     if not sentences:
         return []
@@ -36,9 +35,8 @@ def extract_memory_keywords(text, num_points=3):
 
 
 def memory_augmented_summary(text, max_tokens=3000, memory_points=3):
-    """
-    Generates a memory-augmented summary that guides the summarizer using important concepts.
-    """
+    
+    # Generates a memory-augmented summary that guides the summarizer using important concepts.
     memory = extract_memory_keywords(text, num_points=memory_points)
 
     memory_prompt = (
