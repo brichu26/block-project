@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minesweeper</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Minesweeper</h1>
+
+    <div>
+        <button id="easy-button">Easy (10x10)</button>
+        <button id="medium-button">Medium (15x15)</button>
+        <button id="hard-button">Hard (30x30)</button>
+        <button id="tutorial-button">?</button> <!-- Tutorial Button -->
+        <button id="forfeit-button">Forfeit Game</button> <!-- New Forfeit Button -->
+    </div>
+
+    <div id="minesweeper-board"></div>
+    <button id="reset-button">Reset Game</button>
+
+    <!-- Tutorial Popup -->
+    <div id="tutorial-popup" class="popup">
+        <div class="popup-content">
+            <h2 id="tutorial-title"></h2>
+            <p id="tutorial-text"></p>
+            <div id="tutorial-visual"></div>
+            <button id="prev-button">Previous</button>
+            <button id="next-button">Next</button>
+            <button id="close-button">Close</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

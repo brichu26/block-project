@@ -1,0 +1,19 @@
+together>=0.2.5
+tiktoken>=0.5.0
+python-dotenv>=1.0.0
+typing-extensions>=4.5.0
+flask>=2.0.0
+openai>=1.0.0
+PyMuPDF  # for PDF parsing 
+streamlit>=1.30.0  # for the web interface 
+langchain
+langgraph-supervisor
+langchain-openai
+pypdf
+nltk
+langgraph
+langchain-core
+langchain-community
+tiktoken
+chromadb
+uuid
