@@ -5,7 +5,10 @@
 
 - **RAG**:  
   Experiments and results for RAG-based context management strategies.
-
+  
+- **RunContextWindowLimit**:  
+  A simulation framework for evaluating summarization strategies under large language model (LLM) context window constraints.
+  
 - **context_management**:  
   Experiments for summarization and memory-based context management strategies.
 
