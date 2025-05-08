@@ -1,12 +1,18 @@
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 import csv
 import re
+import json
 from bs4 import BeautifulSoup
+
+# Import evaluation components
+from mcp_documentation_eval import DocumentationEvaluator
+from mcp_security_eval import SecurityEvaluator
+from mcp_popularity_eval import PopularityEvaluator
 
 # GitHub API configuration
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
@@ -26,130 +32,101 @@ MCP_COMMUNITY_REPO_URL = "https://github.com/modelcontextprotocol/servers"
 MCP_COMMUNITY_REPO_API_README_URL = "https://api.github.com/repos/modelcontextprotocol/servers/readme"
 
 class MCPServerScorer:
-    def __init__(self):
-        pass
-
-    def calculate_popularity_score(self, stars: int, forks: int, last_commit: datetime) -> float:
-        # GitHub Stars (Score component: 15 points max)
-        if stars >= 1000:
-            star_score = 15
-        elif stars >= 500:
-            star_score = 12
-        elif stars >= 100:
-            star_score = 10
-        elif stars >= 50:
-            star_score = 7
-        elif stars > 0:
-             star_score = 4
-        else:
-            star_score = 0 # Assign 0 if no stars
-
-        # GitHub Forks (Score component: 15 points max)
-        if forks >= 200:
-            fork_score = 15
-        elif forks >= 100:
-            fork_score = 12
-        elif forks >= 50:
-            fork_score = 10
-        elif forks >= 10:
-            fork_score = 7
-        elif forks > 0:
-            fork_score = 4
-        else:
-            fork_score = 0 # Assign 0 if no forks
-
-        # Recent Commits (Score component: 10 points max)
-        now = datetime.now()
-        if last_commit: # Check if last_commit is not None
-             time_since_commit = now - last_commit
-             if time_since_commit <= timedelta(days=30):
-                 commit_score = 10
-             elif time_since_commit <= timedelta(days=180):
-                 commit_score = 8
-             elif time_since_commit <= timedelta(days=365):
-                 commit_score = 6
-             elif time_since_commit <= timedelta(days=730): # 2 years
-                 commit_score = 4
-             else:
-                 commit_score = 2
-        else:
-             commit_score = 0 # Assign 0 if no commit data
-
-        # Total score out of 40, normalized to 0-100 scale
-        total_score = star_score + fork_score + commit_score
-        return round((total_score / 40) * 100, 2)
-
-def fetch_github_repo_data(repo_path: str) -> Optional[Dict]:
-    """Fetch repository data from GitHub API for a specific owner/repo path."""
-    if not repo_path or '/' not in repo_path:
-        print(f"Invalid repository path format: {repo_path}")
-        return None
-
-    base_url = f"https://api.github.com/repos/{repo_path}"
-    repo_info = None
-    commits = None
-    last_commit_date = None
-
-    try:
-        # Fetch basic repository info
-        response_repo = requests.get(base_url, headers=HEADERS, timeout=10)
-        response_repo.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-        repo_info = response_repo.json()
-
-        # Fetch commits
-        commits_url = f"{base_url}/commits?per_page=1" # Only need the most recent
-        response_commits = requests.get(commits_url, headers=HEADERS, timeout=10)
-        response_commits.raise_for_status()
-        commits = response_commits.json()
-
-        if commits:
-            # Handle different commit structures (commit.author or commit.committer)
-            commit_date_str = None
-            if 'commit' in commits[0] and commits[0]['commit']:
-                 if 'author' in commits[0]['commit'] and commits[0]['commit']['author'] and 'date' in commits[0]['commit']['author']:
-                      commit_date_str = commits[0]['commit']['author']['date']
-                 elif 'committer' in commits[0]['commit'] and commits[0]['commit']['committer'] and 'date' in commits[0]['commit']['committer']:
-                      commit_date_str = commits[0]['commit']['committer']['date']
-
-            if commit_date_str:
-                 # Parse date, removing the 'Z' for timezone if present
-                 last_commit_date = datetime.strptime(commit_date_str.replace('Z', ''), '%Y-%m-%dT%H:%M:%S')
-            else:
-                 print(f"Could not find commit date for {repo_path}")
-        else:
-            print(f"No commits found for {repo_path}")
-
+    """Central scoring system for MCP servers based on the scorecard criteria."""
+    
+    def __init__(self, github_token: Optional[str] = None):
+        """Initialize with optional GitHub token for API access."""
+        self.github_token = github_token
+        self.documentation_evaluator = DocumentationEvaluator(github_token)
+        self.security_evaluator = SecurityEvaluator(github_token)
+        self.popularity_evaluator = PopularityEvaluator(github_token)
+    
+    def score_server(self, owner: str, repo: str) -> Dict[str, Any]:
+        """Score a server based on all evaluation criteria."""
+        print(f"\nEvaluating {owner}/{repo}...")
+        
+        # Run documentation evaluation
+        print("Evaluating documentation quality...")
+        doc_result = self.documentation_evaluator.evaluate(owner, repo)
+        
+        # Run security evaluation
+        print("Evaluating security practices...")
+        security_result = self.security_evaluator.evaluate(owner, repo)
+        
+        # Run popularity evaluation
+        print("Evaluating popularity and community support...")
+        popularity_result = self.popularity_evaluator.evaluate(owner, repo)
+        
+        # Calculate weighted overall score
+        # Assuming equal weights for each category (adjust as needed)
+        overall_score = (
+            doc_result["score"] * 0.33 +
+            security_result["score"] * 0.33 +
+            popularity_result["score"] * 0.34
+        )
+        
         return {
-            'stars': repo_info.get('stargazers_count', 0),
-            'forks': repo_info.get('forks_count', 0),
-            'last_commit': last_commit_date,
-            'name': repo_info.get('name', repo_path.split('/')[-1]),
-            'description': repo_info.get('description', 'N/A'),
-            'repo_path': repo_path # Add repo_path for reference
+            "repo": f"{owner}/{repo}",
+            "overall_score": round(overall_score, 2),
+            "documentation": doc_result,
+            "security": security_result,
+            "popularity": popularity_result
         }
+    
+    def generate_scorecard(self, result: Dict[str, Any]) -> str:
+        """Generate a human-readable scorecard from evaluation results."""
+        repo = result["repo"]
+        overall_score = result["overall_score"]
+        doc = result["documentation"]
+        security = result["security"]
+        popularity = result["popularity"]
+        
+        scorecard = f"""
+{'=' * 80}
+MCP SERVER SCORECARD: {repo}
+{'=' * 80}
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data for {repo_path}: {e}")
-        # Return partial data if possible, or None
-        if repo_info: # If basic info was fetched but commits failed
-             return {
-                  'stars': repo_info.get('stargazers_count', 0),
-                  'forks': repo_info.get('forks_count', 0),
-                  'last_commit': None, # Indicate commit fetch failed
-                  'name': repo_info.get('name', repo_path.split('/')[-1]),
-                  'description': repo_info.get('description', 'N/A'),
-                  'repo_path': repo_path
-             }
-        return None # If initial repo fetch failed
-    except Exception as e: # Catch other potential errors like JSON decoding or date parsing
-         print(f"An unexpected error occurred processing {repo_path}: {e}")
-         return None
+OVERALL SCORE: {overall_score}/10
 
+1. DOCUMENTATION QUALITY: {doc['score']}/10 - {doc['rating']}
+{'-' * 40}
+- Base Section Score: {doc['details']['base_section_score']} (30% weight)
+- Essential Sections Bonus: {doc['details']['essential_sections_bonus']} (20% weight)
+- Readability Score: {doc['details']['readability_score']} (15% weight)
+- Size Bonus: {doc['details']['size_bonus']} (10% weight)
+- Heading Structure Bonus: {doc['details']['heading_structure_bonus']} (10% weight)
+- Code Examples Bonus: {doc['details']['code_examples_bonus']} (10% weight)
+- Completeness Bonus: {doc['details']['completeness_bonus']} (5% weight)
+
+2. SECURITY PRACTICES: {security['score']} - Risk Level: {security['risk_level']}
+{'-' * 40}
+- Authentication Score: {security['details']['authentication_score']} (40% weight)
+- Configuration Security Score: {security['details']['configuration_security_score']} (30% weight)
+- Network Security Score: {security['details']['network_security_score']} (30% weight)
+- OAuth Implementation: {'Yes' if security['details']['oauth_implementation'] else 'No'}
+- Direct API Tokens: {'Yes' if security['details']['direct_api_tokens'] else 'No'}
+
+3. POPULARITY & COMMUNITY SUPPORT: {popularity['score']}/10
+{'-' * 40}
+- GitHub Stars: {popularity['details']['stars']} (z-score: {popularity['details']['stars_zscore']})
+- Forks: {popularity['details']['forks']} (z-score: {popularity['details']['forks_zscore']})
+- Days Since Last Commit: {popularity['details']['days_since_commit']} (z-score: {popularity['details']['days_since_commit_zscore']})
+- Download Count: {popularity['details']['download_count']} (z-score: {popularity['details']['download_count_zscore']})
+
+Stars Score: {popularity['details']['stars_score']} (15% weight)
+Forks Score: {popularity['details']['forks_score']} (15% weight)
+Recent Activity Score: {popularity['details']['days_since_commit_score']} (10% weight)
+Download Score: {popularity['details']['download_count_score']} (10% weight)
+
+{'=' * 80}
+        """
+        return scorecard
 
 def extract_github_repo_path(url: str) -> Optional[str]:
     """Extracts owner/repo path from various GitHub URL formats."""
     if not url:
         return None
+    
     # Match standard github.com URLs
     match = re.search(r"github\.com/([^/]+/[^/]+)", url)
     if match:
@@ -173,58 +150,52 @@ def fetch_community_servers_from_readme() -> List[Dict[str, str]]:
         import base64
         readme_content = base64.b64decode(readme_data['content']).decode('utf-8')
 
-        # Use BeautifulSoup to parse the HTML rendering of the README (or just process markdown)
-        # Simpler approach: Process raw markdown for list items under relevant sections
+        # Process raw markdown for list items under relevant sections
         server_section_found = False
-        potential_sections = ["🌟 Reference Servers", "Community Servers", "MCP Servers"] # Add known section headers
+        potential_sections = ["🌟 Reference Servers", "Community Servers", "MCP Servers"]
         lines = readme_content.splitlines()
 
         for line in lines:
             line = line.strip()
             # Check if we entered a relevant section
             if any(line.startswith(f"## {section}") or line.startswith(f"# {section}") for section in potential_sections):
-                 server_section_found = True
-                 continue # Move to the next line after finding the header
+                server_section_found = True
+                continue  # Move to the next line after finding the header
 
-            # Stop processing if we hit another major section or end of relevant list
-            if server_section_found and (line.startswith("## ") or line.startswith("# ") or not line):
-                 # Heuristic: stop if we encounter another header or an empty line after finding the section
-                 # This might need refinement based on exact README structure
-                 # server_section_found = False # Optionally reset if multiple sections could exist
-                 pass # Continue checking in case list items are separated by blank lines
+            # Stop processing if we hit another major section
+            if server_section_found and (line.startswith("## ") or line.startswith("# ")):
+                server_section_found = False
 
             # If in a server section, look for list items likely containing links
             if server_section_found and line.startswith("*"):
-                 # Extract name (text before potential link/parenthesis)
-                 server_name = line.split('](')[0].split('[')[-1].strip()
-                 if not server_name: # Handle cases like "* **Server Name** - Description"
-                     match_bold = re.match(r"\* \*\*([^*]+)\*\*", line)
-                     if match_bold:
-                         server_name = match_bold.group(1)
-                     else: # Fallback to the start of the line if no clear name pattern
-                          server_name = line[1:].strip().split('-')[0].strip()
+                # Extract name (text before potential link/parenthesis)
+                server_name = line.split('](')[0].split('[')[-1].strip()
+                if not server_name:  # Handle cases like "* **Server Name** - Description"
+                    match_bold = re.match(r"\* \*\*([^*]+)\*\*", line)
+                    if match_bold:
+                        server_name = match_bold.group(1)
+                    else:  # Fallback to the start of the line if no clear name pattern
+                        server_name = line[1:].strip().split('-')[0].strip()
 
+                # Find a GitHub link in the line
+                repo_path = None
+                links = re.findall(r'\(https://github\.com/[^)]+\)', line)
+                if links:
+                    repo_path = extract_github_repo_path(links[0])
 
-                 # Find a GitHub link in the line
-                 repo_path = None
-                 links = re.findall(r'\(https://github\.com/[^)]+\)', line)
-                 if links:
-                     repo_path = extract_github_repo_path(links[0])
-
-                 # If a valid repo path is found, add the server
-                 if repo_path:
-                     print(f"Found Server: {server_name}, Repo: {repo_path}")
-                     servers.append({"name": server_name, "repo_path": repo_path})
-                 else:
-                     print(f"Could not extract GitHub repo path for line: {line}")
-
+                # If a valid repo path is found, add the server
+                if repo_path:
+                    print(f"Found Server: {server_name}, Repo: {repo_path}")
+                    servers.append({"name": server_name, "repo_path": repo_path})
+                else:
+                    print(f"Could not extract GitHub repo path for line: {line}")
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching README from {MCP_COMMUNITY_REPO_API_README_URL}: {e}")
     except Exception as e:
         print(f"Error parsing README content: {e}")
 
-    # Deduplicate based on repo_path as some servers might be listed multiple times or have variations
+    # Deduplicate based on repo_path
     unique_servers = []
     seen_repos = set()
     for server in servers:
@@ -235,84 +206,130 @@ def fetch_community_servers_from_readme() -> List[Dict[str, str]]:
     print(f"Found {len(unique_servers)} unique community servers.")
     return unique_servers
 
-def main():
-    print("Fetching community server list from MCP README...")
-    community_servers = fetch_community_servers_from_readme()
-
-    if not community_servers:
-        print("No community servers found or error fetching README. Exiting.")
+def export_results_to_csv(results: List[Dict[str, Any]], filename: str = "mcp_server_scores.csv"):
+    """Export evaluation results to a CSV file."""
+    if not results:
+        print("No results to export.")
         return
-
-    print(f"Fetching GitHub data for {len(community_servers)} servers...")
-    server_data = []
-    scorer = MCPServerScorer()
-    processed_count = 0
-
-    for server in community_servers:
-        repo_path = server.get("repo_path")
-        server_name = server.get("name", "Unknown")
-        if not repo_path:
-            print(f"Skipping server '{server_name}' due to missing repo path.")
-            continue
-
-        print(f"Processing {repo_path} ({server_name})...")
-        data = fetch_github_repo_data(repo_path)
-        processed_count += 1
-
-        if data:
-            popularity_score = scorer.calculate_popularity_score(
-                data['stars'],
-                data['forks'],
-                data['last_commit']
-            )
-            server_data.append({
-                'Server Name': server_name,
-                'Repository': data['repo_path'],
-                'Stars': data['stars'],
-                'Forks': data['forks'],
-                'Last Commit Date': data['last_commit'].strftime('%Y-%m-%d %H:%M:%S') if data['last_commit'] else 'N/A',
-                'Popularity Score (%)': popularity_score
-                # Add description if needed: 'Description': data['description']
-            })
-            print(f"-> Stars: {data['stars']}, Forks: {data['forks']}, Last Commit: {data['last_commit']}, Score: {popularity_score}%")
-        else:
-            print(f"-> Failed to fetch data for {repo_path}")
-            # Optionally add failed repos to the CSV with N/A values
-            server_data.append({
-                'Server Name': server_name,
-                'Repository': repo_path,
-                'Stars': 'N/A',
-                'Forks': 'N/A',
-                'Last Commit Date': 'N/A',
-                'Popularity Score (%)': 'N/A'
-            })
-
-        # Add a small delay to avoid hitting rate limits, especially without a token
-        time.sleep(0.5) # Adjust as needed
-
-    print(f"\nProcessed {processed_count} servers.")
-
-    if not server_data:
-        print("No data collected for servers. Cannot generate CSV.")
-        return
-
-    # Output to CSV
-    output_filename = 'community_server_scores.csv'
-    print(f"Writing results to {output_filename}...")
+    
+    # Prepare data for CSV
+    csv_data = []
+    for result in results:
+        repo = result["repo"]
+        doc_score = result["documentation"]["score"]
+        doc_rating = result["documentation"]["rating"]
+        security_score = result["security"]["score"]
+        security_risk = result["security"]["risk_level"]
+        popularity_score = result["popularity"]["score"]
+        overall_score = result["overall_score"]
+        
+        csv_data.append({
+            "Repository": repo,
+            "Overall Score": overall_score,
+            "Documentation Score": doc_score,
+            "Documentation Rating": doc_rating,
+            "Security Score": security_score,
+            "Security Risk Level": security_risk,
+            "Popularity Score": popularity_score,
+            "Stars": result["popularity"]["details"]["stars"],
+            "Forks": result["popularity"]["details"]["forks"],
+            "Days Since Last Commit": result["popularity"]["details"]["days_since_commit"]
+        })
+    
+    # Write to CSV
     try:
-        with open(output_filename, 'w', newline='', encoding='utf-8') as csvfile:
-            # Define fieldnames based on the keys of the first valid data entry
-            fieldnames = server_data[0].keys()
+        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = csv_data[0].keys()
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
             writer.writeheader()
-            writer.writerows(server_data)
-        print("Successfully wrote results to CSV.")
-    except IOError as e:
-        print(f"Error writing CSV file: {e}")
+            writer.writerows(csv_data)
+        print(f"Successfully exported results to {filename}")
     except Exception as e:
-        print(f"An unexpected error occurred during CSV writing: {e}")
+        print(f"Error exporting results to CSV: {e}")
 
+def export_results_to_json(results: List[Dict[str, Any]], filename: str = "mcp_server_scores.json"):
+    """Export full evaluation results to a JSON file."""
+    if not results:
+        print("No results to export.")
+        return
+    
+    try:
+        with open(filename, 'w', encoding='utf-8') as jsonfile:
+            json.dump(results, jsonfile, indent=2)
+        print(f"Successfully exported detailed results to {filename}")
+    except Exception as e:
+        print(f"Error exporting results to JSON: {e}")
+
+def main():
+    """Main function to run the MCP server scoring system."""
+    github_token = os.getenv('GITHUB_TOKEN')
+    
+    # Parse command line arguments for specific repos
+    import argparse
+    parser = argparse.ArgumentParser(description='Score MCP servers based on documentation, security, and popularity.')
+    parser.add_argument('--repos', nargs='+', help='Specific GitHub repositories to evaluate (format: owner/repo)')
+    parser.add_argument('--from-readme', action='store_true', help='Fetch servers from MCP community README')
+    parser.add_argument('--output-csv', type=str, default="mcp_server_scores.csv", help='Output CSV filename')
+    parser.add_argument('--output-json', type=str, default="mcp_server_scores.json", help='Output JSON filename')
+    parser.add_argument('--verbose', action='store_true', help='Print detailed scorecards')
+    args = parser.parse_args()
+    
+    # Initialize the scorer
+    scorer = MCPServerScorer(github_token)
+    
+    # Determine which repositories to evaluate
+    repos_to_evaluate = []
+    
+    if args.repos:
+        # Use provided repos
+        for repo_path in args.repos:
+            if '/' in repo_path:
+                owner, repo = repo_path.split('/', 1)
+                repos_to_evaluate.append({"name": repo, "owner": owner, "repo": repo})
+            else:
+                print(f"Invalid repository format: {repo_path}. Expected format: owner/repo")
+    
+    if args.from_readme or not repos_to_evaluate:
+        print("Fetching community server list from MCP README...")
+        community_servers = fetch_community_servers_from_readme()
+        for server in community_servers:
+            if '/' in server['repo_path']:
+                owner, repo = server['repo_path'].split('/', 1)
+                repos_to_evaluate.append({"name": server['name'], "owner": owner, "repo": repo})
+    
+    if not repos_to_evaluate:
+        print("No repositories to evaluate. Exiting.")
+        return
+    
+    print(f"Will evaluate {len(repos_to_evaluate)} repositories.")
+    
+    # Evaluate each repository
+    results = []
+    for repo_info in repos_to_evaluate:
+        try:
+            owner = repo_info["owner"]
+            repo = repo_info["repo"]
+            
+            result = scorer.score_server(owner, repo)
+            results.append(result)
+            
+            if args.verbose:
+                scorecard = scorer.generate_scorecard(result)
+                print(scorecard)
+            else:
+                print(f"{owner}/{repo}: Overall Score: {result['overall_score']}/10")
+            
+            # Add a small delay to avoid rate limits
+            time.sleep(1)
+        except Exception as e:
+            print(f"Error evaluating {repo_info.get('name', repo_info.get('repo', 'unknown'))}: {e}")
+    
+    # Export results
+    if results:
+        export_results_to_csv(results, args.output_csv)
+        export_results_to_json(results, args.output_json)
+    
+    print("Evaluation complete!")
 
 if __name__ == "__main__":
     main()
