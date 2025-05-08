@@ -1,0 +1,107 @@
+=== Summary Results ===
+
+
+=== Truncated Summary ===
+Tokens: 500
+Retention Score: 0.90
+  Justification: This score measures how much of the original content is preserved in the summary.
+  A score of 0.90 indicates that 90% of the key information from the original text is maintained.
+Coherence Score: 0.27
+  Justification: This score measures how well the summary flows and maintains logical connections.
+  A score of 0.27 indicates the level of semantic coherence and readability of the summary.
+
+Summary Text:
+User: Hey, I’ve been hearing a lot about LLMs lately. What exactly are they?
+
+LLM: Great question! LLMs, or Large Language Models, are types of AI systems trained on vast amounts of text data. They learn patterns in language, allowing them to generate human-like responses, summarize information, translate text, write code, and more. Think of them as really advanced text prediction machines.
+
+User: So... like, ChatGPT is an LLM?
+
+LLM: Exactly! ChatGPT is based on OpenAI’s GPT architecture, which stands for Generative Pre-trained Transformer. It’s one of the most widely used LLMs today.
+
+User: That’s cool. But how does it “know” stuff? Like, I asked you what LLMs were and you just answered right away.
+
+LLM: I don’t actually “know” things in the way humans do—I don’t have beliefs or consciousness. Instead, I generate responses based on statistical patterns in data I was trained on. It’s like autocomplete, but with a really advanced understanding of context.
+
+User: So you're just guessing the next word?
+
+LLM: At a high level, yes! But the “guessing” is based on billions of examples of language, so the guesses can be very accurate and nuanced. Under the hood, the model uses attention mechanisms and transformer layers to understand complex dependencies across sentences.
+
+User: Whoa, what’s a transformer?
+
+LLM: A transformer is a deep learning architecture introduced in 2017 by Vaswani et al. in the paper “Attention is All You Need.” It revolutionized natural language processing. The core idea is the self-attention mechanism, which allows the model to weigh the importance of different words in a sequence relative to each other.
+
+User: Sounds intense. Do people still use RNNs for this kind of stuff?
+
+LLM: RNNs (Recurrent Neural Networks) were common before transformers, but they struggled with long-range dependencies and parallelization. Transformers are faster and more effective, so they’ve largely replaced RNNs for most NLP tasks.
+
+User: Makes sense. Can you give me an example of how self-attention works?
+
+LLM: Sure! Imagine the sentence: “The cat sat on the mat because it was tired.”
+
+To understand what “it” refers to, the model uses self-attention to relate “it” to “the cat.” It
+
+==================================================
+
+=== Abstractive Summary ===
+Tokens: 41
+Retention Score: 0.30
+  Justification: This score measures how much of the original content is preserved in the summary.
+  A score of 0.30 indicates that 30% of the key information from the original text is maintained.
+Coherence Score: 0.46
+  Justification: This score measures how well the summary flows and maintains logical connections.
+  A score of 0.46 indicates the level of semantic coherence and readability of the summary.
+
+Summary Text:
+Large Language Models (LLMs) are AI systems trained on vast amounts of text data. They learn patterns in language, allowing them to generate human-like responses, summarize information, translate text, write code.
+
+==================================================
+
+=== Hierarchical Summary ===
+Tokens: 212
+Retention Score: 0.50
+  Justification: This score measures how much of the original content is preserved in the summary.
+  A score of 0.50 indicates that 50% of the key information from the original text is maintained.
+Coherence Score: 0.30
+  Justification: This score measures how well the summary flows and maintains logical connections.
+  A score of 0.30 indicates the level of semantic coherence and readability of the summary.
+
+Summary Text:
+Large Language Models (LLMs) are advanced AI systems trained on extensive text data, enabling them to generate human-like responses and essentially functioning as sophisticated text prediction machines. The transformer, a deep learning architecture introduced in 2017, has revolutionized natural language processing (NLP) by being faster and more effective, largely replacing RNNs for most NLP tasks. However, while LLMs can generate convincing text, they sometimes produce factually incorrect or misleading content, posing risks such as misinformation, phishing scams, deepfake generation, academic dishonesty, and reinforcing harmful biases. 
+
+In a different context, productivity techniques like the Pomodoro Technique, task batching, and time blocking can be used to manage tasks efficiently. The Pomodoro Technique involves working for 25 minutes followed by a 5-minute break. Task batching groups similar tasks together to minimize context switching, and time blocking allocates specific time slots for focused work. These techniques can be used to plan your day effectively, given the tasks at hand, available hours, and planned breaks.
+
+==================================================
+
+=== ChatGPT-4 Summary ===
+Tokens: 209
+LLM Evaluation:
+  - Relevance: 9
+    Justification: The summary successfully captures the main topics and themes of the original text, which is primarily about Large Language Models (LLMs), their functioning, and their features. However, it missed the part about the risks and safety measures associated with LLMs.
+  - Coherence: 9
+    Justification: The summary is well-structured and logically organized. It follows a clear progression from introducing LLMs, to explaining how they work, and then talking about the underlying technology (transformers).
+  - Conciseness: 9
+    Justification: The summary is concise and to the point. It includes the most crucial information from the original text without unnecessary details. However, it could have mentioned the risk and safety aspects of LLMs in a more condensed way.
+  - Information_preservation: 8
+    Justification: The summary preserves many of the key details and facts from the original text, particularly around the nature and functioning of LLMs. However, it omits some important information about the potential dangers and safeguards associated with LLMs.
+  Overall Comment: The summary does a great job of concisely explaining what Large Language Models (LLMs) are, how they work, and their underlying technology. However, it could be improved by also mentioning the risks associated with LLMs and the measures taken to mitigate those risks.
+
+Summary Text:
+LLMs, or Large Language Models, are AI systems trained on extensive text data to learn language patterns. They can generate human-like responses, summarize information, translate text, write code, etc. An example of an LLM is ChatGPT, based on OpenAI's GPT architecture. These models don't have consciousness or beliefs; they generate responses based on statistical patterns in the data they were trained on, much like an advanced autocomplete. They guess the next word based on billions of language examples, using attention mechanisms and transformer layers to understand complex sentence dependencies.
+
+A transformer is a deep learning architecture that revolutionized natural language processing. It uses a self-attention mechanism to weigh the importance of different words in a sequence relative to each other. While Recurrent Neural Networks (RNNs) were previously used, transformers have largely replaced them due to their speed and effectiveness. For example, in the sentence "The cat sat on the mat because it was tired," the model uses self-attention to relate "it" to "the cat."
+
+==================================================
+
+Ranking of summarization techniques:
+1. ChatGPT-4 (Score: 8.75)
+2. Truncated (Score: 0.58)
+3. Hierarchical (Score: 0.40)
+4. Abstractive (Score: 0.38)
+
+Why 'ChatGPT-4' was the best summarization technique:
+- Relevance: Scored 9/5. Justification: The summary successfully captures the main topics and themes of the original text, which is primarily about Large Language Models (LLMs), their functioning, and their features. However, it missed the part about the risks and safety measures associated with LLMs.
+- Coherence: Scored 9/5. Justification: The summary is well-structured and logically organized. It follows a clear progression from introducing LLMs, to explaining how they work, and then talking about the underlying technology (transformers).
+- Conciseness: Scored 9/5. Justification: The summary is concise and to the point. It includes the most crucial information from the original text without unnecessary details. However, it could have mentioned the risk and safety aspects of LLMs in a more condensed way.
+- Information_preservation: Scored 8/5. Justification: The summary preserves many of the key details and facts from the original text, particularly around the nature and functioning of LLMs. However, it omits some important information about the potential dangers and safeguards associated with LLMs.
+- Overall Comment: The summary does a great job of concisely explaining what Large Language Models (LLMs) are, how they work, and their underlying technology. However, it could be improved by also mentioning the risks associated with LLMs and the measures taken to mitigate those risks.
