@@ -1,6 +1,6 @@
 # Content Management System with Summarization Capabilities
 
-This system provides multiple summarization techniques for text content, with evaluation metrics to compare their effectiveness. A key feature is the implementation of an LLM-based evaluation pipeline that provides detailed, human-like assessment of summary quality.
+This system provides multiple summarization techniques for text content, with evaluation metrics to compare their effectiveness. A key feature is the implementation of an LLM-based evaluation pipeline that provides detailed, human-like assessment of summary quality. The system also simulates running up against LLM context window limits on a smaller scale to test summarization effectiveness under constraints.
 
 ## Prerequisites
 
@@ -146,6 +146,42 @@ The system implements a sophisticated LLM-based evaluation pipeline using GPT-4 
    - Human-like assessment of summary quality
    - Detailed feedback on strengths and weaknesses
    - Consistent scoring across different types of content
+
+## Context Window Simulation
+
+The system simulates LLM context window limitations by implementing scaled-down token limits:
+
+1. **Input Token Limit (1000 tokens):**
+   - Simulates the maximum input length an LLM can process
+   - Located in `CMS.py` line 293: `def main(convo_file, token_limit=500, input_token_limit=1000)`
+   - If input exceeds this limit, text is truncated before processing
+
+2. **Summary Token Limit (500 tokens):**
+   - Simulates the maximum output length for summaries
+   - Applied to all summarization methods:
+     - Truncated summaries
+     - Abstractive summaries (BART)
+     - Hierarchical summaries
+     - ChatGPT-4 summaries
+
+3. **Implementation Details:**
+   - Token limits are enforced in multiple functions:
+     - `truncate_text()`: Enforces input token limit
+     - `abstractive_summary()`: Limits BART output
+     - `hierarchical_summary()`: Controls chunk sizes and final summary
+     - `chatgpt_summary()`: Enforces token limit in GPT-4 prompts
+
+4. **Real Example with conversation_log.txt:**
+   - Input file size: 1,651 tokens (1,270 words)
+   - Exceeds simulated context window limit of 1,000 tokens by 651 tokens
+   - Perfect test case for demonstrating how different summarization methods handle content that exceeds context windows
+   - Triggers all summarization techniques to compress and preserve information while staying within token limits
+   - Shows practical application of dealing with context window constraints
+
+5. **Testing Results:**
+   - The input file deliberately exceeds the simulated token limits
+   - Demonstrates how different summarization methods handle content that exceeds context windows
+   - Shows the trade-offs between information preservation and conciseness
 
 ## Notes
 

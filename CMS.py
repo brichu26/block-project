@@ -13,12 +13,6 @@ import argparse
 import json
 from openai import OpenAI
 
-import os
-
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    raise ValueError("OPENAI_API_KEY environment variable not set")
-
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Content Management System with summarization capabilities')
 parser.add_argument('input_file', help='Input conversation file to process')
@@ -28,18 +22,20 @@ parser.add_argument('--input-token-limit', type=int, default=1000, help='Maximum
 parser.add_argument('--check-tokens', action='store_true', help='Only check token count of input file')
 args = parser.parse_args()
 
-# Download required NLTK data
-nltk.download("punkt")
-
 # Set OpenAI API key from environment variable or command line argument
 api_key = args.api_key or os.getenv("OPENAI_API_KEY")
-if not api_key:
+if not api_key and not args.check_tokens:
     print("Error: OpenAI API key not found")
     print("Please either:")
     print("1. Set OPENAI_API_KEY environment variable: export OPENAI_API_KEY='your-api-key-here'")
     print("2. Provide the API key as an argument: python CMS.py test_conversation.txt --api-key 'your-api-key'")
     sys.exit(1)
-openai.api_key = api_key
+
+if api_key:
+    openai.api_key = api_key
+
+# Download required NLTK data
+nltk.download("punkt")
 
 EVALUATION_PROMPT_TEMPLATE = """
 You are an expert evaluator assessing the quality of a text summary.
