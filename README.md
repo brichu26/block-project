@@ -15,6 +15,9 @@
 - **conversation_summarizer**:  
   Experiments for testing out the "vibes" of different summarization strategies.
 
+- **mcp-scorecard**:
+  Includes MCP datasets, collected data, and code to run the scorecard. 
+
 - **mcp**:  
   Experiments for MCP scorecard development — tuning weights, criteria, etc.
 
